@@ -64,7 +64,9 @@ class RAGService:
         query_embedding = embedding_service.generate_embedding(question)
 
         return chroma_service.search(
-            query_embedding=query_embedding, top_k=top_k, min_similarity=0.50
+            query_embedding=query_embedding,
+            top_k=top_k,
+            min_similarity=0.50
         )
 
     def answer_question(self, question: str, top_k: int = 3):
