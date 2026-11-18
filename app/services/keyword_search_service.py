@@ -9,10 +9,17 @@ from app.vectorstore.chroma_service import chroma_service
 class KeywordSearchService:
     """Searches stored document chunks using BM25 keyword ranking."""
 
+    STOP_WORDS = {
+        "a", "an", "and", "are", "as", "at", "be", "by",
+        "does", "for", "from", "how", "i", "in", "is",
+        "it", "of", "on", "or", "the", "to", "what",
+        "when", "where", "which", "who", "why", "with",
+        "have", "has", "had", "was", "were", "will",
+        "would", "could", "should", "can", "do"
+    }
+
     @staticmethod
     def tokenize(text: str) -> list[str]:
-        """Convert text into lowercase searchable tokens."""
-
         return re.findall(r"\w+", text.lower(), flags=re.UNICODE)
 
     def search(
@@ -20,7 +27,6 @@ class KeywordSearchService:
         query: str,
         top_k: int = 10
     ) -> dict:
-        """Retrieve the most relevant chunks using keyword matching."""
 
         if not query or not query.strip():
             raise ValueError("Search query cannot be empty.")
@@ -30,10 +36,15 @@ class KeywordSearchService:
 
         query_tokens = self.tokenize(query)
 
-        if not query_tokens:
+        # Remove common words before checking keyword overlap.
+        meaningful_tokens = {
+            token for token in query_tokens
+            if token not in self.STOP_WORDS
+        }
+
+        if not meaningful_tokens:
             return self._empty_results()
 
-        # Retrieve existing chunks without modifying ChromaDB.
         results = chroma_service.collection.get(
             include=["documents", "metadatas"]
         )
@@ -45,7 +56,6 @@ class KeywordSearchService:
         if not ids or not documents:
             return self._empty_results()
 
-        # Keep valid documents and their corresponding metadata.
         corpus = []
         valid_ids = []
         valid_documents = []
@@ -76,9 +86,7 @@ class KeywordSearchService:
         if not corpus:
             return self._empty_results()
 
-        # BM25Plus also produces useful scores for small collections.
         bm25 = BM25Plus(corpus)
-
         scores = bm25.get_scores(query_tokens)
 
         ranked_indices = sorted(
@@ -87,11 +95,23 @@ class KeywordSearchService:
             reverse=True
         )
 
-        matched_indices = [
-            index
-            for index in ranked_indices
-            if scores[index] > 0
-        ][:top_k]
+        matched_indices = []
+
+        for index in ranked_indices:
+
+            document_tokens = set(corpus[index])
+
+            # Require at least one meaningful exact keyword match.
+            if not meaningful_tokens.intersection(document_tokens):
+                continue
+
+            if scores[index] <= 0:
+                continue
+
+            matched_indices.append(index)
+
+            if len(matched_indices) >= top_k:
+                break
 
         return {
             "ids": [
