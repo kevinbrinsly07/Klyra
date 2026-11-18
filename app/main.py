@@ -5,7 +5,7 @@ from openai import APIConnectionError, APIStatusError, RateLimitError
 from app.core.config import settings
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.llm_service import llm_service
-
+from app.routers.documents import router as documents_router
 
 app = FastAPI(
     title="LankaMind AI",
@@ -15,6 +15,8 @@ app = FastAPI(
     ),
     version="0.1.0"
 )
+
+app.include_router(documents_router)
 
 
 @app.get("/")
