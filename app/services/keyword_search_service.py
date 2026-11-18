@@ -1,4 +1,3 @@
-
 import re
 from threading import RLock
 
@@ -11,12 +10,48 @@ class KeywordSearchService:
     """Searches stored document chunks using a cached BM25 index."""
 
     STOP_WORDS = {
-        "a", "an", "and", "are", "as", "at", "be", "by",
-        "does", "for", "from", "how", "i", "in", "is",
-        "it", "of", "on", "or", "the", "to", "what",
-        "when", "where", "which", "who", "why", "with",
-        "have", "has", "had", "was", "were", "will",
-        "would", "could", "should", "can", "do"
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "does",
+        "for",
+        "from",
+        "how",
+        "i",
+        "in",
+        "is",
+        "it",
+        "of",
+        "on",
+        "or",
+        "the",
+        "to",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "with",
+        "have",
+        "has",
+        "had",
+        "was",
+        "were",
+        "will",
+        "would",
+        "could",
+        "should",
+        "can",
+        "do",
+        "sri",
+        "lanka",
+        "both",
     }
 
     def __init__(self):
@@ -34,11 +69,7 @@ class KeywordSearchService:
 
     @staticmethod
     def tokenize(text: str) -> list[str]:
-        return re.findall(
-            r"\w+",
-            text.lower(),
-            flags=re.UNICODE
-        )
+        return re.findall(r"\w+", text.lower(), flags=re.UNICODE)
 
     def invalidate_cache(self):
         """Invalidate the index after documents change."""
@@ -57,9 +88,7 @@ class KeywordSearchService:
     def _build_index(self):
         """Load documents and build the BM25 index."""
 
-        results = chroma_service.collection.get(
-            include=["documents", "metadatas"]
-        )
+        results = chroma_service.collection.get(include=["documents", "metadatas"])
 
         ids = results.get("ids") or []
         documents = results.get("documents") or []
@@ -85,9 +114,7 @@ class KeywordSearchService:
             valid_documents.append(document)
 
             metadata = (
-                metadatas[index]
-                if index < len(metadatas) and metadatas[index]
-                else {}
+                metadatas[index] if index < len(metadatas) and metadatas[index] else {}
             )
 
             valid_metadatas.append(metadata)
@@ -110,10 +137,7 @@ class KeywordSearchService:
 
         with self._lock:
 
-            if (
-                not self._initialized
-                or current_count != self._cached_count
-            ):
+            if not self._initialized or current_count != self._cached_count:
                 self._build_index()
 
             return (
@@ -121,14 +145,10 @@ class KeywordSearchService:
                 self._ids,
                 self._documents,
                 self._metadatas,
-                self._corpus
+                self._corpus,
             )
 
-    def search(
-        self,
-        query: str,
-        top_k: int = 10
-    ) -> dict:
+    def search(self, query: str, top_k: int = 10) -> dict:
 
         if not query or not query.strip():
             raise ValueError("Search query cannot be empty.")
@@ -139,27 +159,27 @@ class KeywordSearchService:
         query_tokens = self.tokenize(query)
 
         meaningful_tokens = {
-            token
-            for token in query_tokens
-            if token not in self.STOP_WORDS
+            token for token in query_tokens if token not in self.STOP_WORDS
         }
 
         if not meaningful_tokens:
             return self._empty_results()
 
-        bm25, ids, documents, metadatas, corpus = (
-            self._get_index()
-        )
+        bm25, ids, documents, metadatas, corpus = self._get_index()
 
         if bm25 is None:
             return self._empty_results()
 
-        scores = bm25.get_scores(query_tokens)
+        filtered_query_tokens = [
+            token
+            for token in query_tokens
+            if token not in self.STOP_WORDS
+        ]
+
+        scores = bm25.get_scores(filtered_query_tokens)
 
         ranked_indices = sorted(
-            range(len(scores)),
-            key=lambda index: scores[index],
-            reverse=True
+            range(len(scores)), key=lambda index: scores[index], reverse=True
         )
 
         matched_indices = []
@@ -180,18 +200,10 @@ class KeywordSearchService:
                 break
 
         return {
-            "ids": [
-                [ids[index] for index in matched_indices]
-            ],
-            "documents": [
-                [documents[index] for index in matched_indices]
-            ],
-            "metadatas": [
-                [metadatas[index] for index in matched_indices]
-            ],
-            "scores": [
-                [float(scores[index]) for index in matched_indices]
-            ],
+            "ids": [[ids[index] for index in matched_indices]],
+            "documents": [[documents[index] for index in matched_indices]],
+            "metadatas": [[metadatas[index] for index in matched_indices]],
+            "scores": [[float(scores[index]) for index in matched_indices]],
         }
 
     @staticmethod
