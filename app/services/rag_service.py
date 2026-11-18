@@ -5,6 +5,7 @@ from app.services.document_service import document_service
 from app.services.embedding_service import embedding_service
 from app.vectorstore.chroma_service import chroma_service
 from app.services.llm_service import llm_service
+from app.services.hybrid_search_service import hybrid_search_service
 
 
 class RAGService:
@@ -61,10 +62,8 @@ class RAGService:
         if not 1 <= top_k <= 10:
             raise ValueError("top_k must be between 1 and 10.")
 
-        query_embedding = embedding_service.generate_embedding(question)
-
-        return chroma_service.search(
-            query_embedding=query_embedding,
+        return hybrid_search_service.search(
+            query=question,
             top_k=top_k,
             min_similarity=0.50
         )
@@ -110,7 +109,7 @@ Content:
                 "document_id": metadata.get("document_id"),
             }
 
-            if index < len(distances):
+            if index < len(distances) and distances[index] is not None:
                 source["distance"] = distances[index]
 
             if source not in sources:
