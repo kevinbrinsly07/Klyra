@@ -1,4 +1,3 @@
-
 """End-to-end evaluation of Klyra's RAG pipeline.
 
 Uses a temporary ChromaDB collection and the existing RAG services.
@@ -7,6 +6,7 @@ The production collection is restored after evaluation.
 
 import uuid
 from typing import Any, cast
+import re
 
 import chromadb
 
@@ -31,16 +31,26 @@ def build_synthetic_corpus():
         for chunk in source["chunks"]:
             ids.append(chunk["chunk_id"])
             documents.append(chunk["content"])
-            metadatas.append({
-                "document_id": source["document_id"],
-                "filename": source["filename"],
-                "chunk_index": len([
-                    item for item in metadatas
-                    if item["document_id"] == source["document_id"]
-                ]),
-            })
+            metadatas.append(
+                {
+                    "document_id": source["document_id"],
+                    "filename": source["filename"],
+                    "chunk_index": len(
+                        [
+                            item
+                            for item in metadatas
+                            if item["document_id"] == source["document_id"]
+                        ]
+                    ),
+                }
+            )
 
     return ids, documents, metadatas
+
+
+def normalize_text(text: str) -> str:
+    """Normalize punctuation and whitespace for phrase comparisons."""
+    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
 
 
 def evaluate_case(case, index):
@@ -59,12 +69,10 @@ def evaluate_case(case, index):
     answer = result["answer"]
     sources = result["sources"]
 
-    answer_lower = answer.lower()
+    normalized_answer = normalize_text(answer)
 
     source_ids = {
-        source["document_id"]
-        for source in sources
-        if source.get("document_id")
+        source["document_id"] for source in sources if source.get("document_id")
     }
 
     print(f"\nTest {index}/7")
@@ -74,8 +82,7 @@ def evaluate_case(case, index):
 
     if should_find:
         answer_found = all(
-            term.lower() in answer_lower
-            for term in expected_terms
+            normalize_text(term) in normalized_answer for term in expected_terms
         )
 
         sources_found = expected_ids.issubset(source_ids)
@@ -84,14 +91,14 @@ def evaluate_case(case, index):
 
         print(
             f"Expected answer terms: "
-            f"{sum(term.lower() in answer_lower for term in expected_terms)}"
+            f"{sum(normalize_text(term) in normalized_answer for term in expected_terms)}"
             f"/{len(expected_terms)}"
         )
         print(f"Expected sources found: {sources_found}")
 
     else:
         answer_not_found = not sources and (
-            "couldn't find relevant information" in answer_lower
+            "couldn't find relevant information" in answer.lower()
         )
 
         passed = answer_not_found
