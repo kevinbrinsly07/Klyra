@@ -1,31 +1,51 @@
-import shutil
+
 import uuid
 
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 
 from app.services.rag_service import rag_service
-from app.schemas.document import DocumentUploadResponse
+from app.schemas.document import (
+    DocumentUploadResponse,
+    DocumentListResponse,
+    DocumentDeleteResponse,
+)
 from app.vectorstore.chroma_service import chroma_service
-from fastapi import APIRouter, UploadFile, File, HTTPException
 
-router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
 
-UPLOAD_DIR = Path("data/uploads")
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+router = APIRouter(
+    prefix="/api/v1/documents",
+    tags=["Documents"],
+)
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+UPLOAD_DIR = BASE_DIR / "data" / "uploads"
+
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@router.post("/upload", response_model=DocumentUploadResponse)
+@router.post(
+    "/upload",
+    response_model=DocumentUploadResponse,
+)
 async def upload_document(file: UploadFile = File(...)):
 
     if not file.filename:
-        raise HTTPException(status_code=400, detail="Filename is required.")
+        raise HTTPException(
+            status_code=400,
+            detail="Filename is required.",
+        )
 
-    if Path(file.filename).suffix.lower() != ".pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    filename = Path(file.filename).name
+
+    if Path(filename).suffix.lower() != ".pdf":
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are supported.",
+        )
 
     temporary_path = UPLOAD_DIR / f"{uuid.uuid4()}.pdf"
 
@@ -33,21 +53,28 @@ async def upload_document(file: UploadFile = File(...)):
         file_size = 0
 
         with temporary_path.open("wb") as buffer:
+
             while chunk := await file.read(1024 * 1024):
+
                 file_size += len(chunk)
 
                 if file_size > MAX_FILE_SIZE:
                     raise HTTPException(
-                        status_code=413, detail="File exceeds the 10 MB limit."
+                        status_code=413,
+                        detail="File exceeds the 10 MB limit.",
                     )
 
                 buffer.write(chunk)
 
         if file_size == 0:
-            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+            raise HTTPException(
+                status_code=400,
+                detail="Uploaded file is empty.",
+            )
 
         result = rag_service.ingest_document(
-            file_path=str(temporary_path), filename=Path(file.filename).name
+            file_path=str(temporary_path),
+            filename=filename,
         )
 
         return DocumentUploadResponse(**result)
@@ -55,9 +82,16 @@ async def upload_document(file: UploadFile = File(...)):
     except HTTPException:
         raise
 
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(error),
+        ) from error
+
     except Exception as error:
         raise HTTPException(
-            status_code=500, detail="Document processing failed."
+            status_code=500,
+            detail="Document processing failed.",
         ) from error
 
     finally:
@@ -67,20 +101,43 @@ async def upload_document(file: UploadFile = File(...)):
         await file.close()
 
 
-@router.get("/")
-def list_documents():
-    documents = chroma_service.list_documents()
+@router.get(
+    "/",
+    response_model=DocumentListResponse,
+)
+def list_documents(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
 
-    return {"total_documents": len(documents), "documents": documents}
+    documents = chroma_service.list_documents(
+        limit=limit,
+        offset=offset,
+    )
+
+    return {
+        "total_documents": len(documents),
+        "limit": limit,
+        "offset": offset,
+        "documents": documents,
+    }
 
 
-@router.delete("/{document_id}")
+@router.delete(
+    "/{document_id}",
+    response_model=DocumentDeleteResponse,
+)
 def delete_document(document_id: str):
 
-    deleted_chunks = chroma_service.delete_document(document_id)
+    deleted_chunks = chroma_service.delete_document(
+        document_id
+    )
 
     if deleted_chunks == 0:
-        raise HTTPException(status_code=404, detail="Document not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
 
     return {
         "message": "Document deleted successfully.",
