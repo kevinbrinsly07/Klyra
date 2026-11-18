@@ -6,3 +6,8 @@ python-dotenv
 pytest
 httpx
 openai
+chromadb 
+sentence-transformers 
+pypdf 
+python-multipart
+reportlab

@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-5.5"
+    OPENAI_MODEL: str = "gpt-6-luna"
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
