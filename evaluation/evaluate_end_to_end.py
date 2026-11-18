@@ -123,6 +123,7 @@ def evaluate():
 
         print("\nGenerating embeddings...")
         embeddings = embedding_service.generate_embeddings(documents)
+        embeddings = [list(embedding) for embedding in embeddings]
 
         temporary_collection.upsert(
             ids=ids,
