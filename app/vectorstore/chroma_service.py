@@ -1,5 +1,6 @@
 
 import chromadb
+
 from pathlib import Path
 from typing import cast
 
@@ -13,6 +14,7 @@ class ChromaService:
     """Manages document embeddings in ChromaDB."""
 
     def __init__(self):
+
         project_root = Path(__file__).resolve().parents[2]
         database_path = project_root / "data" / "chroma"
 
@@ -35,9 +37,13 @@ class ChromaService:
         filename: str,
         file_hash: str,
     ):
-        """Store document chunks, embeddings and metadata."""
 
-        ids: list[str] = [
+        if len(chunks) != len(embeddings):
+            raise ValueError(
+                "Chunks and embeddings count must match."
+            )
+
+        ids = [
             f"{document_id}_{index}"
             for index in range(len(chunks))
         ]
@@ -65,7 +71,6 @@ class ChromaService:
         )
 
     def find_document_by_hash(self, file_hash: str):
-        """Find an existing document using its SHA-256 hash."""
 
         results = self.collection.get(
             where={"file_hash": file_hash},
@@ -87,25 +92,101 @@ class ChromaService:
     def search(
         self,
         query_embedding: list[float],
-        top_k: int = 3
+        top_k: int = 3,
+        min_similarity: float | None = None
     ):
-        """Find the most relevant document chunks."""
+        """Search relevant chunks using cosine similarity."""
 
-        return self.collection.query(
+        if not 1 <= top_k <= 20:
+            raise ValueError("top_k must be between 1 and 20.")
+
+        if min_similarity is not None and not (
+            0 <= min_similarity <= 1
+        ):
+            raise ValueError(
+                "min_similarity must be between 0 and 1."
+            )
+
+        total_documents = self.collection.count()
+
+        if total_documents == 0:
+            return {
+                "ids": [[]],
+                "documents": [[]],
+                "metadatas": [[]],
+                "distances": [[]],
+            }
+
+        results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=top_k
+            n_results=min(top_k, total_documents),
+            include=[
+                "documents",
+                "metadatas",
+                "distances"
+            ]
         )
 
-    def list_documents(self) -> list[dict[str, str | int]]:
-        """List all stored documents and their chunk counts."""
+        if min_similarity is None:
+            return results
+
+        documents = []
+        metadatas = []
+        distances = []
+        ids = []
+
+        distances_result = results["distances"] or [[]]
+        documents_result = results["documents"] or [[]]
+        metadatas_result = results["metadatas"] or [[]]
+
+        for index, distance in enumerate(
+            distances_result[0]
+        ):
+
+            similarity = 1 - distance
+
+            if similarity < min_similarity:
+                continue
+
+            documents.append(
+                documents_result[0][index]
+            )
+
+            metadatas.append(
+                metadatas_result[0][index]
+            )
+
+            distances.append(distance)
+
+            ids.append(
+                results["ids"][0][index]
+            )
+
+        results["documents"] = [documents]
+        results["metadatas"] = [metadatas]
+        results["distances"] = [distances]
+        results["ids"] = [ids]
+
+        return results
+
+    def list_documents(
+        self,
+        limit: int = 100,
+        offset: int = 0
+    ) -> list[dict[str, str | int]]:
+
+        if limit < 1 or offset < 0:
+            raise ValueError("Invalid pagination parameters.")
 
         results = self.collection.get(
-            include=["metadatas"]
+            include=["metadatas"],
+            limit=None
         )
 
         documents = {}
 
         for metadata in results["metadatas"] or []:
+
             document_id = metadata["document_id"]
             filename = metadata["filename"]
 
@@ -118,10 +199,11 @@ class ChromaService:
 
             documents[document_id]["total_chunks"] += 1
 
-        return list(documents.values())
+        all_documents = list(documents.values())
+
+        return all_documents[offset:offset + limit]
 
     def delete_document(self, document_id: str) -> int:
-        """Delete all chunks belonging to a document."""
 
         results = self.collection.get(
             where={"document_id": document_id},
