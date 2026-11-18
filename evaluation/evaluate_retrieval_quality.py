@@ -83,6 +83,10 @@ def evaluate_case(case, index):
         for metadata in metadatas
         if metadata and metadata.get("document_id")
     ]
+    print("\nDEBUG: Exact metric input")
+    print("Chunk IDs:", retrieved_ids)
+    print("Metadata:", metadatas)
+    print("Document IDs:", retrieved_documents)
 
     # Preserve ranking while counting each source document only once.
     unique_retrieved = list(dict.fromkeys(retrieved_documents))
