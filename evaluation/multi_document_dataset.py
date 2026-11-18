@@ -1,4 +1,3 @@
-
 """Synthetic evaluation corpus for Klyra retrieval testing.
 
 These fixtures are independent of the production ChromaDB collection.
@@ -89,8 +88,7 @@ EVALUATION_DOCUMENTS = [
 MULTI_DOCUMENT_EVALUATION_DATASET = [
     {
         "question": (
-            "What are the requirements for obtaining a driving "
-            "licence in Sri Lanka?"
+            "What are the requirements for obtaining a driving " "licence in Sri Lanka?"
         ),
         "expected_document_ids": ["driving_licence"],
         "expected_terms": [
@@ -102,15 +100,20 @@ MULTI_DOCUMENT_EVALUATION_DATASET = [
         ],
         "requires_multiple_chunks": True,
         "should_find_answer": True,
+        "relevant_chunk_ids": [
+            "driving_licence_0",
+            "driving_licence_1",
+        ],
+        "supporting_chunk_ids": [],
     },
     {
-        "question": (
-            "Which authority issues driving licences in Sri Lanka?"
-        ),
+        "question": ("Which authority issues driving licences in Sri Lanka?"),
         "expected_document_ids": ["driving_licence"],
         "expected_terms": ["Department of Motor Traffic"],
         "requires_multiple_chunks": False,
         "should_find_answer": True,
+        "relevant_chunk_ids": ["driving_licence_1"],
+        "supporting_chunk_ids": [],
     },
     {
         "question": (
@@ -124,15 +127,17 @@ MULTI_DOCUMENT_EVALUATION_DATASET = [
         ],
         "requires_multiple_chunks": False,
         "should_find_answer": True,
+        "relevant_chunk_ids": ["university_admissions_0"],
+        "supporting_chunk_ids": [],
     },
     {
-        "question": (
-            "Does Sri Lanka have both public and private universities?"
-        ),
+        "question": ("Does Sri Lanka have both public and private universities?"),
         "expected_document_ids": ["university_admissions"],
         "expected_terms": ["public and private universities"],
         "requires_multiple_chunks": False,
         "should_find_answer": True,
+        "relevant_chunk_ids": ["university_admissions_1"],
+        "supporting_chunk_ids": [],
     },
     {
         "question": (
@@ -149,23 +154,28 @@ MULTI_DOCUMENT_EVALUATION_DATASET = [
         ],
         "requires_multiple_chunks": True,
         "should_find_answer": True,
+        "relevant_chunk_ids": ["vehicle_registration_0"],
+        "supporting_chunk_ids": [
+            "driving_licence_0",
+            "driving_licence_1",
+        ],
     },
     {
-        "question": (
-            "Who won the FIFA World Cup in 2022?"
-        ),
+        "question": ("Who won the FIFA World Cup in 2022?"),
         "expected_document_ids": [],
         "expected_terms": [],
         "requires_multiple_chunks": False,
         "should_find_answer": False,
+        "relevant_chunk_ids": [],
+        "supporting_chunk_ids": [],
     },
     {
-        "question": (
-            "Explain quantum physics and quantum computing."
-        ),
+        "question": ("Explain quantum physics and quantum computing."),
         "expected_document_ids": [],
         "expected_terms": [],
         "requires_multiple_chunks": False,
         "should_find_answer": False,
+        "relevant_chunk_ids": [],
+        "supporting_chunk_ids": [],
     },
 ]
