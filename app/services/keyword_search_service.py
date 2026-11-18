@@ -1,5 +1,6 @@
 
 import re
+from threading import RLock
 
 from rank_bm25 import BM25Plus
 
@@ -7,7 +8,7 @@ from app.vectorstore.chroma_service import chroma_service
 
 
 class KeywordSearchService:
-    """Searches stored document chunks using BM25 keyword ranking."""
+    """Searches stored document chunks using a cached BM25 index."""
 
     STOP_WORDS = {
         "a", "an", "and", "are", "as", "at", "be", "by",
@@ -18,32 +19,43 @@ class KeywordSearchService:
         "would", "could", "should", "can", "do"
     }
 
+    def __init__(self):
+
+        self._bm25 = None
+        self._ids = []
+        self._documents = []
+        self._metadatas = []
+        self._corpus = []
+
+        self._cached_count = -1
+        self._initialized = False
+
+        self._lock = RLock()
+
     @staticmethod
     def tokenize(text: str) -> list[str]:
-        return re.findall(r"\w+", text.lower(), flags=re.UNICODE)
+        return re.findall(
+            r"\w+",
+            text.lower(),
+            flags=re.UNICODE
+        )
 
-    def search(
-        self,
-        query: str,
-        top_k: int = 10
-    ) -> dict:
+    def invalidate_cache(self):
+        """Invalidate the index after documents change."""
 
-        if not query or not query.strip():
-            raise ValueError("Search query cannot be empty.")
+        with self._lock:
 
-        if not 1 <= top_k <= 20:
-            raise ValueError("top_k must be between 1 and 20.")
+            self._bm25 = None
+            self._ids = []
+            self._documents = []
+            self._metadatas = []
+            self._corpus = []
 
-        query_tokens = self.tokenize(query)
+            self._cached_count = -1
+            self._initialized = False
 
-        # Remove common words before checking keyword overlap.
-        meaningful_tokens = {
-            token for token in query_tokens
-            if token not in self.STOP_WORDS
-        }
-
-        if not meaningful_tokens:
-            return self._empty_results()
+    def _build_index(self):
+        """Load documents and build the BM25 index."""
 
         results = chroma_service.collection.get(
             include=["documents", "metadatas"]
@@ -52,9 +64,6 @@ class KeywordSearchService:
         ids = results.get("ids") or []
         documents = results.get("documents") or []
         metadatas = results.get("metadatas") or []
-
-        if not ids or not documents:
-            return self._empty_results()
 
         corpus = []
         valid_ids = []
@@ -83,10 +92,68 @@ class KeywordSearchService:
 
             valid_metadatas.append(metadata)
 
-        if not corpus:
+        bm25 = BM25Plus(corpus) if corpus else None
+
+        self._bm25 = bm25
+        self._ids = valid_ids
+        self._documents = valid_documents
+        self._metadatas = valid_metadatas
+        self._corpus = corpus
+
+        self._cached_count = chroma_service.collection.count()
+        self._initialized = True
+
+    def _get_index(self):
+        """Return the cached index or rebuild it when necessary."""
+
+        current_count = chroma_service.collection.count()
+
+        with self._lock:
+
+            if (
+                not self._initialized
+                or current_count != self._cached_count
+            ):
+                self._build_index()
+
+            return (
+                self._bm25,
+                self._ids,
+                self._documents,
+                self._metadatas,
+                self._corpus
+            )
+
+    def search(
+        self,
+        query: str,
+        top_k: int = 10
+    ) -> dict:
+
+        if not query or not query.strip():
+            raise ValueError("Search query cannot be empty.")
+
+        if not 1 <= top_k <= 20:
+            raise ValueError("top_k must be between 1 and 20.")
+
+        query_tokens = self.tokenize(query)
+
+        meaningful_tokens = {
+            token
+            for token in query_tokens
+            if token not in self.STOP_WORDS
+        }
+
+        if not meaningful_tokens:
             return self._empty_results()
 
-        bm25 = BM25Plus(corpus)
+        bm25, ids, documents, metadatas, corpus = (
+            self._get_index()
+        )
+
+        if bm25 is None:
+            return self._empty_results()
+
         scores = bm25.get_scores(query_tokens)
 
         ranked_indices = sorted(
@@ -101,7 +168,6 @@ class KeywordSearchService:
 
             document_tokens = set(corpus[index])
 
-            # Require at least one meaningful exact keyword match.
             if not meaningful_tokens.intersection(document_tokens):
                 continue
 
@@ -115,13 +181,13 @@ class KeywordSearchService:
 
         return {
             "ids": [
-                [valid_ids[index] for index in matched_indices]
+                [ids[index] for index in matched_indices]
             ],
             "documents": [
-                [valid_documents[index] for index in matched_indices]
+                [documents[index] for index in matched_indices]
             ],
             "metadatas": [
-                [valid_metadatas[index] for index in matched_indices]
+                [metadatas[index] for index in matched_indices]
             ],
             "scores": [
                 [float(scores[index]) for index in matched_indices]

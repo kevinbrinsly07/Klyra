@@ -6,6 +6,7 @@ from app.services.embedding_service import embedding_service
 from app.vectorstore.chroma_service import chroma_service
 from app.services.llm_service import llm_service
 from app.services.hybrid_search_service import hybrid_search_service
+from app.services.keyword_search_service import keyword_search_service
 
 
 class RAGService:
@@ -47,6 +48,8 @@ class RAGService:
             file_hash=file_hash,
         )
 
+        keyword_search_service.invalidate_cache()
+
         return {
             "document_id": document_id,
             "filename": filename,
@@ -63,9 +66,7 @@ class RAGService:
             raise ValueError("top_k must be between 1 and 10.")
 
         return hybrid_search_service.search(
-            query=question,
-            top_k=top_k,
-            min_similarity=0.50
+            query=question, top_k=top_k, min_similarity=0.50
         )
 
     def answer_question(self, question: str, top_k: int = 3):

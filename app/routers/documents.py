@@ -12,6 +12,7 @@ from app.schemas.document import (
     DocumentDeleteResponse,
 )
 from app.vectorstore.chroma_service import chroma_service
+from app.services.keyword_search_service import keyword_search_service
 
 
 router = APIRouter(
@@ -132,6 +133,9 @@ def delete_document(document_id: str):
     deleted_chunks = chroma_service.delete_document(
         document_id
     )
+
+    if deleted_chunks > 0:
+        keyword_search_service.invalidate_cache()
 
     if deleted_chunks == 0:
         raise HTTPException(
