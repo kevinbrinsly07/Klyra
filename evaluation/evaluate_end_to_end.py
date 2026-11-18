@@ -6,6 +6,7 @@ The production collection is restored after evaluation.
 """
 
 import uuid
+from typing import Any, cast
 
 import chromadb
 
@@ -123,13 +124,12 @@ def evaluate():
 
         print("\nGenerating embeddings...")
         embeddings = embedding_service.generate_embeddings(documents)
-        embeddings = [list(embedding) for embedding in embeddings]
 
         temporary_collection.upsert(
             ids=ids,
             documents=documents,
             metadatas=metadatas,
-            embeddings=[tuple(embedding) for embedding in embeddings],
+            embeddings=cast(Any, embeddings),
         )
 
         chroma_service.collection = temporary_collection
