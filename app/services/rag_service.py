@@ -7,6 +7,7 @@ from app.vectorstore.chroma_service import chroma_service
 from app.services.llm_service import llm_service
 from app.services.hybrid_search_service import hybrid_search_service
 from app.services.keyword_search_service import keyword_search_service
+from app.services.context_service import context_service
 
 
 class RAGService:
@@ -57,7 +58,9 @@ class RAGService:
             "status": "processed",
         }
 
-    def retrieve_documents(self, question: str, top_k: int = 3):
+    def retrieve_documents(
+        self, question: str, top_k: int = 3, return_candidates: bool = False
+    ):
 
         if not question or not question.strip():
             raise ValueError("Question cannot be empty.")
@@ -66,12 +69,19 @@ class RAGService:
             raise ValueError("top_k must be between 1 and 10.")
 
         return hybrid_search_service.search(
-            query=question, top_k=top_k, min_similarity=0.50
+            query=question,
+            top_k=top_k,
+            min_similarity=0.50,
+            return_candidates=return_candidates,
         )
 
     def answer_question(self, question: str, top_k: int = 3):
 
-        results = self.retrieve_documents(question, top_k)
+        results = self.retrieve_documents(question, top_k, return_candidates=True)
+
+        results = context_service.process(
+            query=question, results=results, max_chunks=top_k
+        )
 
         documents = (results.get("documents") or [[]])[0]
         metadatas = (results.get("metadatas") or [[]])[0]

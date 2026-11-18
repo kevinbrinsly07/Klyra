@@ -1,4 +1,3 @@
-
 from app.services.embedding_service import embedding_service
 from app.services.keyword_search_service import keyword_search_service
 from app.vectorstore.chroma_service import chroma_service
@@ -12,7 +11,8 @@ class HybridSearchService:
         query: str,
         top_k: int = 3,
         min_similarity: float = 0.50,
-        rrf_k: int = 60
+        rrf_k: int = 60,
+        return_candidates: bool = False,
     ) -> dict:
 
         if not query or not query.strip():
@@ -36,22 +36,16 @@ class HybridSearchService:
         semantic_results = chroma_service.search(
             query_embedding=query_embedding,
             top_k=candidate_k,
-            min_similarity=min_similarity
+            min_similarity=min_similarity,
         )
 
         # 2. Keyword retrieval.
-        keyword_results = keyword_search_service.search(
-            query=query,
-            top_k=candidate_k
-        )
+        keyword_results = keyword_search_service.search(query=query, top_k=candidate_k)
 
         fused_results = {}
 
         # 3. Combine rankings using Reciprocal Rank Fusion.
-        retrieval_sets = [
-            semantic_results,
-            keyword_results
-        ]
+        retrieval_sets = [semantic_results, keyword_results]
 
         for retrieval_index, results in enumerate(retrieval_sets):
 
@@ -60,9 +54,7 @@ class HybridSearchService:
             metadatas = (results.get("metadatas") or [[]])[0]
 
             distances = (
-                (results.get("distances") or [[]])[0]
-                if retrieval_index == 0
-                else []
+                (results.get("distances") or [[]])[0] if retrieval_index == 0 else []
             )
 
             for rank, document_id in enumerate(result_ids, start=1):
@@ -80,46 +72,31 @@ class HybridSearchService:
                             else {}
                         ),
                         "semantic_distance": None,
-                        "rrf_score": 0.0
+                        "rrf_score": 0.0,
                     }
 
                 # RRF formula: 1 / (k + rank)
-                fused_results[document_id]["rrf_score"] += (
-                    1 / (rrf_k + rank)
-                )
+                fused_results[document_id]["rrf_score"] += 1 / (rrf_k + rank)
 
                 # Preserve the semantic distance when available.
-                if (
-                    retrieval_index == 0
-                    and rank - 1 < len(distances)
-                ):
-                    fused_results[document_id][
-                        "semantic_distance"
-                    ] = distances[rank - 1]
+                if retrieval_index == 0 and rank - 1 < len(distances):
+                    fused_results[document_id]["semantic_distance"] = distances[
+                        rank - 1
+                    ]
 
         # 4. Sort by combined RRF score.
+        result_limit = candidate_k if return_candidates else top_k
+
         ranked_results = sorted(
-            fused_results.values(),
-            key=lambda item: item["rrf_score"],
-            reverse=True
-        )[:top_k]
+            fused_results.values(), key=lambda item: item["rrf_score"], reverse=True
+        )[:result_limit]
 
         return {
-            "ids": [
-                [item["id"] for item in ranked_results]
-            ],
-            "documents": [
-                [item["document"] for item in ranked_results]
-            ],
-            "metadatas": [
-                [item["metadata"] for item in ranked_results]
-            ],
-            "distances": [
-                [item["semantic_distance"] for item in ranked_results]
-            ],
-            "hybrid_scores": [
-                [item["rrf_score"] for item in ranked_results]
-            ]
+            "ids": [[item["id"] for item in ranked_results]],
+            "documents": [[item["document"] for item in ranked_results]],
+            "metadatas": [[item["metadata"] for item in ranked_results]],
+            "distances": [[item["semantic_distance"] for item in ranked_results]],
+            "hybrid_scores": [[item["rrf_score"] for item in ranked_results]],
         }
 
 
