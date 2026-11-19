@@ -249,10 +249,11 @@ def calculate_sentence_level_entailment(
     return float(probabilities[:, entailment_index].max())
 
 
-def score_entailment(nli_model, entailment_index, scored_cases):
-    """Score every candidate against its case's annotated answer claims."""
 
-    print("\nScoring semantic entailment...")
+def score_entailment(nli_model, entailment_index, scored_cases):
+    """Score candidates using sentence-level NLI verification."""
+
+    print("\nScoring sentence-level semantic entailment...")
 
     total_candidates = 0
 
@@ -260,32 +261,21 @@ def score_entailment(nli_model, entailment_index, scored_cases):
         claims = ANSWER_CLAIMS[case_index]
         candidates = entry["candidates"]
 
-        pairs = [
-            (candidate["document"], claim)
-            for candidate in candidates
-            for claim in claims
-        ]
-
-        probabilities = calculate_entailment_probability(
-            nli_model,
-            entailment_index,
-            pairs,
-        )
-
-        probability_index = 0
-
         for candidate in candidates:
-            claim_scores = []
-
-            for _ in claims:
-                claim_scores.append(probabilities[probability_index])
-                probability_index += 1
-
-            candidate["entailment_score"] = max(claim_scores) if claim_scores else 0.0
+            candidate["entailment_score"] = (
+                calculate_sentence_level_entailment(
+                    nli_model,
+                    candidate["document"],
+                    claims,
+                )
+            )
 
         total_candidates += len(candidates)
 
-        print(f"Scored entailment for question " f"{case_index}/{len(scored_cases)}")
+        print(
+            f"Scored question "
+            f"{case_index}/{len(scored_cases)}"
+        )
 
     print(f"Total candidate passages checked: {total_candidates}")
 
