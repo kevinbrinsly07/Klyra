@@ -403,48 +403,45 @@ def run_experiment(scored_cases, mode):
 def diagnose_nli_predictions(nli_model):
     """Inspect raw NLI outputs for two important evaluation cases."""
 
-    
-    exact_statement = (
-        "Vehicle registration in Sri Lanka is a separate "
-        "administrative process from obtaining a driving licence."
-    )
-
     diagnostics = [
         (
-            "Test 5 - Original passage and claim",
+            "Test 5 - First sentence only",
             (
                 "Vehicle registration in Sri Lanka is a separate "
-                "administrative process from obtaining a driving licence. "
-                "Vehicle owners must follow the applicable registration procedures."
+                "administrative process from obtaining a driving licence."
             ),
-            exact_statement,
+            ANSWER_CLAIMS[5][0],
         ),
         (
-            "Test 5 - Exact same sentence",
-            exact_statement,
-            exact_statement,
+            "Test 5 - Second sentence only",
+            (
+                "Vehicle owners must follow the applicable "
+                "registration procedures."
+            ),
+            ANSWER_CLAIMS[5][0],
         ),
         (
-            "Test 5 - Isolated sentence with reversed order",
-            exact_statement,
-            exact_statement,
-        ),
-        (
-            "Test 13 - Original incorrect passage and claim",
+            "Test 13 - First sentence only",
             (
                 "To obtain a driving licence in Sri Lanka, an applicant "
-                "must first obtain a learner's permit. Applicants must meet "
-                "the minimum age requirement and provide valid identification."
+                "must first obtain a learner's permit."
             ),
-            "The supplied passages specify the minimum age required "
-            "to register a vehicle in Sri Lanka.",
+            ANSWER_CLAIMS[13][0],
+        ),
+        (
+            "Test 13 - Second sentence only",
+            (
+                "Applicants must meet the minimum age requirement "
+                "and provide valid identification."
+            ),
+            ANSWER_CLAIMS[13][0],
         ),
     ]
 
-    print("\nNLI MODEL LABEL MAPPING")
-    print(nli_model.model.config.id2label)
-
-    pairs = [(premise, hypothesis) for _, premise, hypothesis in diagnostics]
+    pairs = [
+        (premise, hypothesis)
+        for _, premise, hypothesis in diagnostics
+    ]
 
     logits = nli_model.predict(
         pairs,
@@ -452,7 +449,7 @@ def diagnose_nli_predictions(nli_model):
         show_progress_bar=False,
     )
 
-    print("\nRAW NLI DIAGNOSTICS")
+    print("\nSENTENCE-LEVEL NLI DIAGNOSTICS")
 
     for index, (description, premise, hypothesis) in enumerate(diagnostics):
         print(f"\n{description}")
