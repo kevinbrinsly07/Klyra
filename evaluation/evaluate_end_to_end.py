@@ -75,7 +75,7 @@ def evaluate_case(case, index):
         source["document_id"] for source in sources if source.get("document_id")
     }
 
-    print(f"\nTest {index}/7")
+    print(f"\nTest {index}/{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
     print(f"Question: {question}")
     print(f"Answer: {answer}")
     print(f"Sources: {[source['filename'] for source in sources]}")

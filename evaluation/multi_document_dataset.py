@@ -178,4 +178,116 @@ MULTI_DOCUMENT_EVALUATION_DATASET = [
         "relevant_chunk_ids": [],
         "supporting_chunk_ids": [],
     },
+    # Test 8: Paraphrased driving licence requirements
+    {
+        "question": ("What do I need before I can legally drive in Sri Lanka?"),
+        "expected_document_ids": ["driving_licence"],
+        "expected_terms": [
+            "learner's permit",
+            "minimum age",
+            "valid identification",
+            "written examination",
+            "practical driving test",
+        ],
+        "requires_multiple_chunks": True,
+        "should_find_answer": True,
+        "relevant_chunk_ids": [
+            "driving_licence_0",
+            "driving_licence_1",
+        ],
+        "supporting_chunk_ids": [],
+    },
+    # Test 9: Paraphrased issuing authority
+    {
+        "question": (
+            "Which government body is responsible for granting "
+            "driving licences in Sri Lanka?"
+        ),
+        "expected_document_ids": ["driving_licence"],
+        "expected_terms": ["Department of Motor Traffic"],
+        "requires_multiple_chunks": False,
+        "should_find_answer": True,
+        "relevant_chunk_ids": ["driving_licence_1"],
+        "supporting_chunk_ids": [],
+    },
+    # Test 10: Paraphrased university admission question
+    {
+        "question": (
+            "How do A-Level results affect entry into universities " "in Sri Lanka?"
+        ),
+        "expected_document_ids": ["university_admissions"],
+        "expected_terms": [
+            "Advanced Level examination",
+            "university admission",
+        ],
+        "requires_multiple_chunks": False,
+        "should_find_answer": True,
+        "relevant_chunk_ids": ["university_admissions_0"],
+        "supporting_chunk_ids": [],
+    },
+    # Test 11: Information technology
+    {
+        "question": (
+            "What areas are included in information technology, "
+            "and what does software engineering involve?"
+        ),
+        "expected_document_ids": ["information_technology"],
+        "expected_terms": [
+            "software development",
+            "computer networks",
+            "databases",
+            "engineering principles",
+        ],
+        "requires_multiple_chunks": False,
+        "should_find_answer": True,
+        "relevant_chunk_ids": ["information_technology_0"],
+        "supporting_chunk_ids": [],
+    },
+    # Test 12: Keyword overlap - vehicle registration vs driving test
+    {
+        "question": (
+            "Does passing a driving test automatically complete "
+            "vehicle registration in Sri Lanka?"
+        ),
+        "expected_document_ids": ["vehicle_registration"],
+        "expected_terms": ["separate administrative process"],
+        "requires_multiple_chunks": False,
+        "should_find_answer": True,
+        "relevant_chunk_ids": ["vehicle_registration_0"],
+        "supporting_chunk_ids": [],
+    },
+    # Test 13: Keyword overlap - unsupported registration age
+    {
+        "question": (
+            "What is the minimum age required to register a vehicle " "in Sri Lanka?"
+        ),
+        "expected_document_ids": [],
+        "expected_terms": [],
+        "requires_multiple_chunks": False,
+        "should_find_answer": False,
+        "relevant_chunk_ids": [],
+        "supporting_chunk_ids": [],
+    },
+    # Test 14: Keyword overlap - unsupported tuition question
+    {
+        "question": (
+            "How much does a software engineering degree cost " "in Sri Lanka?"
+        ),
+        "expected_document_ids": [],
+        "expected_terms": [],
+        "requires_multiple_chunks": False,
+        "should_find_answer": False,
+        "relevant_chunk_ids": [],
+        "supporting_chunk_ids": [],
+    },
+    # Test 15: Completely unrelated question
+    {
+        "question": "How do I renew my passport?",
+        "expected_document_ids": [],
+        "expected_terms": [],
+        "requires_multiple_chunks": False,
+        "should_find_answer": False,
+        "relevant_chunk_ids": [],
+        "supporting_chunk_ids": [],
+    },
 ]

@@ -1,4 +1,3 @@
-
 """Evaluate query-coverage thresholds using chunk-level relevance labels."""
 
 import uuid
@@ -16,7 +15,6 @@ from app.services.embedding_service import embedding_service
 from app.services.hybrid_search_service import hybrid_search_service
 from app.services.keyword_search_service import keyword_search_service
 from app.vectorstore.chroma_service import chroma_service
-
 
 TOP_K = 3
 MIN_SIMILARITY = 0.50
@@ -108,43 +106,29 @@ def evaluate_case(case, threshold):
             "negative_correct": len(selected) == 0,
         }
 
-    retrieved_ids = [
-        candidate["chunk_id"]
-        for candidate in selected
-    ]
+    retrieved_ids = [candidate["chunk_id"] for candidate in selected]
 
     direct_retrieved = [
-        chunk_id
-        for chunk_id in retrieved_ids
-        if chunk_id in direct_relevant
+        chunk_id for chunk_id in retrieved_ids if chunk_id in direct_relevant
     ]
 
     supporting_retrieved = [
-        chunk_id
-        for chunk_id in retrieved_ids
-        if chunk_id in supporting
+        chunk_id for chunk_id in retrieved_ids if chunk_id in supporting
     ]
 
     irrelevant_retrieved = [
         chunk_id
         for chunk_id in retrieved_ids
-        if chunk_id not in direct_relevant
-        and chunk_id not in supporting
+        if chunk_id not in direct_relevant and chunk_id not in supporting
     ]
 
     # Direct and supporting chunks both count as useful context.
     useful_count = len(direct_retrieved) + len(supporting_retrieved)
 
-    precision = (
-        useful_count / len(retrieved_ids)
-        if retrieved_ids
-        else 0.0
-    )
+    precision = useful_count / len(retrieved_ids) if retrieved_ids else 0.0
 
     direct_recall = (
-        len(set(direct_retrieved)) / len(direct_relevant)
-        if direct_relevant
-        else 0.0
+        len(set(direct_retrieved)) / len(direct_relevant) if direct_relevant else 0.0
     )
 
     mrr = 0.0
@@ -183,7 +167,9 @@ def evaluate_threshold(threshold):
         else:
             negative_results.append(result)
 
-        print(f"\nTest {index}/7: {case['question']}")
+        print(
+            f"\nTest {index}/{len(MULTI_DOCUMENT_EVALUATION_DATASET)}: {case['question']}"
+        )
         print(f"Direct relevance: {case['relevant_chunk_ids']}")
         print(f"Supporting context: {case['supporting_chunk_ids']}")
 
@@ -203,40 +189,28 @@ def evaluate_threshold(threshold):
     negative_count = len(negative_results)
 
     avg_precision = (
-        sum(item["precision"] for item in positive_results)
-        / positive_count
+        sum(item["precision"] for item in positive_results) / positive_count
         if positive_count
         else 0.0
     )
 
     avg_recall = (
-        sum(item["direct_recall"] for item in positive_results)
-        / positive_count
+        sum(item["direct_recall"] for item in positive_results) / positive_count
         if positive_count
         else 0.0
     )
 
     avg_mrr = (
-        sum(item["mrr"] for item in positive_results)
-        / positive_count
+        sum(item["mrr"] for item in positive_results) / positive_count
         if positive_count
         else 0.0
     )
 
-    positive_false_positives = sum(
-        item["false_positives"]
-        for item in positive_results
-    )
+    positive_false_positives = sum(item["false_positives"] for item in positive_results)
 
-    negative_correct = sum(
-        item["negative_correct"]
-        for item in negative_results
-    )
+    negative_correct = sum(item["negative_correct"] for item in negative_results)
 
-    negative_false_positives = sum(
-        item["false_positives"]
-        for item in negative_results
-    )
+    negative_false_positives = sum(item["false_positives"] for item in negative_results)
 
     summary = {
         "threshold": threshold,
@@ -255,8 +229,7 @@ def evaluate_threshold(threshold):
     print(f"Mean direct MRR: {avg_mrr:.2%}")
     print(f"Positive-query irrelevant chunks: {positive_false_positives}")
     print(
-        f"Negative queries correctly rejected: "
-        f"{negative_correct}/{negative_count}"
+        f"Negative queries correctly rejected: " f"{negative_correct}/{negative_count}"
     )
     print(f"Negative-query false positives: {negative_false_positives}")
 
@@ -304,9 +277,7 @@ def evaluate():
         summaries = []
 
         for threshold in THRESHOLDS:
-            summaries.append(
-                evaluate_threshold(threshold)
-            )
+            summaries.append(evaluate_threshold(threshold))
 
         print("\n\nFINAL THRESHOLD COMPARISON")
         print("=" * 100)
