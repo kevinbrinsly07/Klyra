@@ -47,7 +47,7 @@ ANSWER_CLAIMS = {
         "Driving licence applicants in Sri Lanka must pass a written examination and a practical driving test.",
     ],
     2: [
-        "The Department of Motor Traffic issues driving licences in Sri Lanka.",
+        "The Department of Motor Traffic is responsible for issuing driving licences.",
     ],
     3: [
         "Advanced Level examination results are used to determine eligibility for university admission in Sri Lanka.",
@@ -69,7 +69,7 @@ ANSWER_CLAIMS = {
         "Driving licence applicants in Sri Lanka must pass a written examination and a practical driving test.",
     ],
     9: [
-        "The Department of Motor Traffic is responsible for granting driving licences in Sri Lanka.",
+        "The Department of Motor Traffic is responsible for issuing driving licences.",
     ],
     10: [
         "Advanced Level examination results affect eligibility for university admission in Sri Lanka.",
@@ -249,7 +249,6 @@ def calculate_sentence_level_entailment(
     return float(probabilities[:, entailment_index].max())
 
 
-
 def score_entailment(nli_model, entailment_index, scored_cases):
     """Score candidates using sentence-level NLI verification."""
 
@@ -262,20 +261,15 @@ def score_entailment(nli_model, entailment_index, scored_cases):
         candidates = entry["candidates"]
 
         for candidate in candidates:
-            candidate["entailment_score"] = (
-                calculate_sentence_level_entailment(
-                    nli_model,
-                    candidate["document"],
-                    claims,
-                )
+            candidate["entailment_score"] = calculate_sentence_level_entailment(
+                nli_model,
+                candidate["document"],
+                claims,
             )
 
         total_candidates += len(candidates)
 
-        print(
-            f"Scored question "
-            f"{case_index}/{len(scored_cases)}"
-        )
+        print(f"Scored question " f"{case_index}/{len(scored_cases)}")
 
     print(f"Total candidate passages checked: {total_candidates}")
 
