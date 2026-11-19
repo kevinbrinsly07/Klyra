@@ -13,6 +13,7 @@ import uuid
 
 import chromadb
 import numpy as np
+import torch
 from sentence_transformers import CrossEncoder
 
 from evaluation.multi_document_dataset import (
@@ -209,6 +210,43 @@ def calculate_entailment_probability(nli_model, entailment_index, pairs):
     )
 
     return probabilities[:, entailment_index].tolist()
+
+
+def calculate_sentence_level_entailment(
+    nli_model,
+    passage,
+    hypotheses,
+):
+    """
+    Evaluate each sentence independently against the hypotheses.
+    Return the highest entailment probability.
+    """
+
+    sentences = re.split(r"(?<=[.!?])\s+", passage.strip())
+
+    sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+
+    if not sentences or not hypotheses:
+        return 0.0
+
+    pairs = [
+        (sentence, hypothesis) for sentence in sentences for hypothesis in hypotheses
+    ]
+
+    logits = nli_model.predict(
+        pairs,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    )
+
+    probabilities = torch.softmax(
+        torch.tensor(logits),
+        dim=1,
+    ).numpy()
+
+    entailment_index = get_entailment_index(nli_model)
+
+    return float(probabilities[:, entailment_index].max())
 
 
 def score_entailment(nli_model, entailment_index, scored_cases):
@@ -414,10 +452,7 @@ def diagnose_nli_predictions(nli_model):
         ),
         (
             "Test 5 - Second sentence only",
-            (
-                "Vehicle owners must follow the applicable "
-                "registration procedures."
-            ),
+            ("Vehicle owners must follow the applicable " "registration procedures."),
             ANSWER_CLAIMS[5][0],
         ),
         (
@@ -438,10 +473,7 @@ def diagnose_nli_predictions(nli_model):
         ),
     ]
 
-    pairs = [
-        (premise, hypothesis)
-        for _, premise, hypothesis in diagnostics
-    ]
+    pairs = [(premise, hypothesis) for _, premise, hypothesis in diagnostics]
 
     logits = nli_model.predict(
         pairs,
