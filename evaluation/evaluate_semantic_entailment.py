@@ -1,4 +1,3 @@
-
 """Evaluate semantic entailment filtering after cross-encoder retrieval.
 
 Compares:
@@ -24,7 +23,6 @@ from app.services.embedding_service import embedding_service
 from app.services.keyword_search_service import keyword_search_service
 from app.services.hybrid_search_service import hybrid_search_service
 from app.vectorstore.chroma_service import chroma_service
-
 
 TOP_K = 3
 MIN_SIMILARITY = 0.50
@@ -103,11 +101,13 @@ def build_synthetic_corpus():
         for index, chunk in enumerate(source["chunks"]):
             ids.append(chunk["chunk_id"])
             documents.append(chunk["content"])
-            metadatas.append({
-                "document_id": source["document_id"],
-                "filename": source["filename"],
-                "chunk_index": index,
-            })
+            metadatas.append(
+                {
+                    "document_id": source["document_id"],
+                    "filename": source["filename"],
+                    "chunk_index": index,
+                }
+            )
 
     return ids, documents, metadatas
 
@@ -133,38 +133,35 @@ def retrieve_candidates(cross_encoder):
         candidate_ids = (results.get("ids") or [[]])[0]
         candidate_documents = (results.get("documents") or [[]])[0]
 
-        pairs = [
-            (question, document)
-            for document in candidate_documents
-        ]
+        pairs = [(question, document) for document in candidate_documents]
 
-        scores = (
-            cross_encoder.predict(pairs)
-            if pairs else []
-        )
+        scores = cross_encoder.predict(pairs) if pairs else []
 
         candidates = []
 
         for candidate_index, document in enumerate(candidate_documents):
-            candidates.append({
-                "chunk_id": candidate_ids[candidate_index],
-                "document": document,
-                "cross_score": float(scores[candidate_index]),
-            })
+            candidates.append(
+                {
+                    "chunk_id": candidate_ids[candidate_index],
+                    "document": document,
+                    "cross_score": float(scores[candidate_index]),
+                }
+            )
 
         candidates.sort(
             key=lambda item: item["cross_score"],
             reverse=True,
         )
 
-        scored_cases.append({
-            "case": case,
-            "candidates": candidates,
-        })
+        scored_cases.append(
+            {
+                "case": case,
+                "candidates": candidates,
+            }
+        )
 
         print(
-            f"Retrieved question {index}/"
-            f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}"
+            f"Retrieved question {index}/" f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}"
         )
 
     return scored_cases
@@ -179,9 +176,7 @@ def get_entailment_index(nli_model):
         if "entail" in str(label).lower():
             return int(index)
 
-    raise ValueError(
-        f"Could not identify the entailment label. Model labels: {labels}"
-    )
+    raise ValueError(f"Could not identify the entailment label. Model labels: {labels}")
 
 
 def calculate_entailment_probability(nli_model, entailment_index, pairs):
@@ -202,9 +197,7 @@ def calculate_entailment_probability(nli_model, entailment_index, pairs):
         logits = logits.reshape(1, -1)
 
     if logits.shape[1] <= entailment_index:
-        raise ValueError(
-            f"Unexpected NLI output shape: {logits.shape}"
-        )
+        raise ValueError(f"Unexpected NLI output shape: {logits.shape}")
 
     # Numerically stable softmax.
     shifted = logits - np.max(logits, axis=1, keepdims=True)
@@ -247,22 +240,14 @@ def score_entailment(nli_model, entailment_index, scored_cases):
             claim_scores = []
 
             for _ in claims:
-                claim_scores.append(
-                    probabilities[probability_index]
-                )
+                claim_scores.append(probabilities[probability_index])
                 probability_index += 1
 
-            candidate["entailment_score"] = (
-                max(claim_scores)
-                if claim_scores else 0.0
-            )
+            candidate["entailment_score"] = max(claim_scores) if claim_scores else 0.0
 
         total_candidates += len(candidates)
 
-        print(
-            f"Scored entailment for question "
-            f"{case_index}/{len(scored_cases)}"
-        )
+        print(f"Scored entailment for question " f"{case_index}/{len(scored_cases)}")
 
     print(f"Total candidate passages checked: {total_candidates}")
 
@@ -272,11 +257,7 @@ def evaluate_results(case, chunk_ids):
     supporting = set(case["supporting_chunk_ids"])
     useful = direct | supporting
 
-    false_positives = [
-        chunk_id
-        for chunk_id in chunk_ids
-        if chunk_id not in useful
-    ]
+    false_positives = [chunk_id for chunk_id in chunk_ids if chunk_id not in useful]
 
     if not case["should_find_answer"]:
         return {
@@ -289,29 +270,16 @@ def evaluate_results(case, chunk_ids):
             "negative_correct": len(chunk_ids) == 0,
         }
 
-    useful_count = sum(
-        chunk_id in useful
-        for chunk_id in chunk_ids
-    )
+    useful_count = sum(chunk_id in useful for chunk_id in chunk_ids)
 
-    direct_found = [
-        chunk_id
-        for chunk_id in chunk_ids
-        if chunk_id in direct
-    ]
+    direct_found = [chunk_id for chunk_id in chunk_ids if chunk_id in direct]
 
     return {
         "retrieved": len(chunk_ids),
         "useful": useful_count,
         "false_positives": len(false_positives),
-        "precision": (
-            useful_count / len(chunk_ids)
-            if chunk_ids else 0.0
-        ),
-        "recall": (
-            len(set(direct_found)) / len(direct)
-            if direct else 0.0
-        ),
+        "precision": (useful_count / len(chunk_ids) if chunk_ids else 0.0),
+        "recall": (len(set(direct_found)) / len(direct) if direct else 0.0),
         "mrr": next(
             (
                 1 / rank
@@ -355,10 +323,7 @@ def run_experiment(scored_cases, mode):
         else:
             raise ValueError(f"Unknown experiment mode: {mode}")
 
-        selected_ids = [
-            candidate["chunk_id"]
-            for candidate in selected
-        ]
+        selected_ids = [candidate["chunk_id"] for candidate in selected]
 
         metrics = evaluate_results(case, selected_ids)
 
@@ -370,11 +335,7 @@ def run_experiment(scored_cases, mode):
             print("Candidate verification:")
 
             for candidate in candidates:
-                selected_status = (
-                    "SELECTED"
-                    if candidate in selected
-                    else "FILTERED"
-                )
+                selected_status = "SELECTED" if candidate in selected else "FILTERED"
 
                 print(
                     f"  {candidate['chunk_id']}: "
@@ -387,57 +348,38 @@ def run_experiment(scored_cases, mode):
             positive_results.append(metrics)
         else:
             negative_results.append(metrics)
-            print(
-                f"Correctly rejected: "
-                f"{metrics['negative_correct']}"
-            )
+            print(f"Correctly rejected: " f"{metrics['negative_correct']}")
 
     positive_count = len(positive_results)
     negative_count = len(negative_results)
 
-    total_useful = sum(
-        item["useful"] for item in positive_results
-    )
-    total_retrieved = sum(
-        item["retrieved"] for item in positive_results
-    )
+    total_useful = sum(item["useful"] for item in positive_results)
+    total_retrieved = sum(item["retrieved"] for item in positive_results)
 
     summary = {
         "macro_precision": (
-            sum(item["precision"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["precision"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "micro_precision": (
-            total_useful / total_retrieved
-            if total_retrieved else 0.0
-        ),
+        "micro_precision": (total_useful / total_retrieved if total_retrieved else 0.0),
         "recall": (
-            sum(item["recall"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["recall"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
         "mrr": (
-            sum(item["mrr"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["mrr"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "positive_fp": sum(
-            item["false_positives"]
-            for item in positive_results
-        ),
-        "negative_fp": sum(
-            item["false_positives"]
-            for item in negative_results
-        ),
+        "positive_fp": sum(item["false_positives"] for item in positive_results),
+        "negative_fp": sum(item["false_positives"] for item in negative_results),
         "total_fp": (
             sum(item["false_positives"] for item in positive_results)
             + sum(item["false_positives"] for item in negative_results)
         ),
-        "negative_correct": sum(
-            item["negative_correct"]
-            for item in negative_results
-        ),
+        "negative_correct": sum(item["negative_correct"] for item in negative_results),
         "negative_total": negative_count,
     }
 
@@ -458,6 +400,48 @@ def run_experiment(scored_cases, mode):
     return summary
 
 
+def diagnose_nli_predictions(nli_model):
+    """Inspect raw NLI outputs for two important evaluation cases."""
+
+    chunk_texts = {
+        chunk["chunk_id"]: chunk["content"]
+        for source in EVALUATION_DOCUMENTS
+        for chunk in source["chunks"]
+    }
+
+    diagnostics = [
+        (
+            "Test 5 - Relevant vehicle registration passage",
+            chunk_texts["vehicle_registration_0"],
+            ANSWER_CLAIMS[5][0],
+        ),
+        (
+            "Test 13 - Incorrect driving licence age passage",
+            chunk_texts["driving_licence_0"],
+            ANSWER_CLAIMS[13][0],
+        ),
+    ]
+
+    print("\nNLI MODEL LABEL MAPPING")
+    print(nli_model.model.config.id2label)
+
+    pairs = [(premise, hypothesis) for _, premise, hypothesis in diagnostics]
+
+    logits = nli_model.predict(
+        pairs,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    )
+
+    print("\nRAW NLI DIAGNOSTICS")
+
+    for index, (description, premise, hypothesis) in enumerate(diagnostics):
+        print(f"\n{description}")
+        print(f"Premise: {premise}")
+        print(f"Hypothesis: {hypothesis}")
+        print(f"Raw logits: {logits[index]}")
+
+
 def evaluate():
     print("\nKLYRA SEMANTIC ENTAILMENT EVALUATION")
     print("===================================")
@@ -470,10 +454,9 @@ def evaluate():
 
     entailment_index = get_entailment_index(nli_model)
 
-    print(
-        f"Detected entailment output index: "
-        f"{entailment_index}"
-    )
+    diagnose_nli_predictions(nli_model)
+
+    print(f"Detected entailment output index: " f"{entailment_index}")
 
     temporary_client = chromadb.EphemeralClient()
 
