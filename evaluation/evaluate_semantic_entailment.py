@@ -403,22 +403,41 @@ def run_experiment(scored_cases, mode):
 def diagnose_nli_predictions(nli_model):
     """Inspect raw NLI outputs for two important evaluation cases."""
 
-    chunk_texts = {
-        chunk["chunk_id"]: chunk["content"]
-        for source in EVALUATION_DOCUMENTS
-        for chunk in source["chunks"]
-    }
+    
+    exact_statement = (
+        "Vehicle registration in Sri Lanka is a separate "
+        "administrative process from obtaining a driving licence."
+    )
 
     diagnostics = [
         (
-            "Test 5 - Relevant vehicle registration passage",
-            chunk_texts["vehicle_registration_0"],
-            ANSWER_CLAIMS[5][0],
+            "Test 5 - Original passage and claim",
+            (
+                "Vehicle registration in Sri Lanka is a separate "
+                "administrative process from obtaining a driving licence. "
+                "Vehicle owners must follow the applicable registration procedures."
+            ),
+            exact_statement,
         ),
         (
-            "Test 13 - Incorrect driving licence age passage",
-            chunk_texts["driving_licence_0"],
-            ANSWER_CLAIMS[13][0],
+            "Test 5 - Exact same sentence",
+            exact_statement,
+            exact_statement,
+        ),
+        (
+            "Test 5 - Isolated sentence with reversed order",
+            exact_statement,
+            exact_statement,
+        ),
+        (
+            "Test 13 - Original incorrect passage and claim",
+            (
+                "To obtain a driving licence in Sri Lanka, an applicant "
+                "must first obtain a learner's permit. Applicants must meet "
+                "the minimum age requirement and provide valid identification."
+            ),
+            "The supplied passages specify the minimum age required "
+            "to register a vehicle in Sri Lanka.",
         ),
     ]
 
