@@ -57,28 +57,23 @@ def evaluate_case(case: dict[str, Any], index: int) -> bool:
     """Run and score one evaluation case."""
 
     question = case["question"]
-    should_find = case["should_find"]
-    expected_terms = case.get("expected_terms", case.get("expected_answer_terms", []))
-    expected_ids = set(case.get("expected_ids", case.get("expected_source_ids", [])))
+    should_find = case["should_find_answer"]
+    expected_terms = case["expected_terms"]
+    expected_ids = set(case["expected_document_ids"])   
 
-    response = cast(Any, rag_service).query(question)
-    if isinstance(response, dict):
-        answer = str(response.get("answer", ""))
-        sources = response.get("sources", []) or []
-    else:
-        answer = str(getattr(response, "answer", response))
-        sources = getattr(response, "sources", []) or []
+    response = rag_service.answer_question(
+    question=question,
+    top_k=3,
+)
+
+    answer = response["answer"]
+    sources = response["sources"]
 
     normalized_answer = normalize_text(answer)
     source_ids = {
-        source_id
+        source["document_id"]
         for source in sources
-        for source_id in (
-            source.get("chunk_id", source.get("id"))
-            if isinstance(source, dict)
-            else getattr(source, "chunk_id", getattr(source, "id", None)),
-        )
-        if source_id is not None
+        if source.get("document_id")
     }
 
     print(f"\nTest {index}: {question}")
