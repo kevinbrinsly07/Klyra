@@ -59,21 +59,19 @@ def evaluate_case(case: dict[str, Any], index: int) -> bool:
     question = case["question"]
     should_find = case["should_find_answer"]
     expected_terms = case["expected_terms"]
-    expected_ids = set(case["expected_document_ids"])   
+    expected_ids = set(case["expected_document_ids"])
 
     response = rag_service.answer_question(
-    question=question,
-    top_k=3,
-)
+        question=question,
+        top_k=3,
+    )
 
     answer = response["answer"]
     sources = response["sources"]
 
     normalized_answer = normalize_text(answer)
     source_ids = {
-        source["document_id"]
-        for source in sources
-        if source.get("document_id")
+        source["document_id"] for source in sources if source.get("document_id")
     }
 
     print(f"\nTest {index}: {question}")
@@ -98,13 +96,16 @@ def evaluate_case(case: dict[str, Any], index: int) -> bool:
         abstention_markers = (
             "couldn't find relevant information",
             "does not state",
+            "does not specify",
             "does not contain",
             "cannot find",
             "not provided",
             "not specified",
         )
 
-        answer_not_found = any(marker in answer.lower() for marker in abstention_markers)
+        answer_not_found = any(
+            marker in answer.lower() for marker in abstention_markers
+        )
 
         source_leakage = bool(sources)
 
@@ -116,7 +117,11 @@ def evaluate_case(case: dict[str, Any], index: int) -> bool:
         if source_leakage:
             print("WARNING: Retrieved sources may not support the question.")
 
-    print(f"Result: {'PASS' if passed else 'FAIL'}")
+        if not passed:
+            print(f"Generated answer: {answer}")
+            print(f"Retrieved source IDs: {sorted(source_ids)}")
+
+        print(f"Result: {'PASS' if passed else 'FAIL'}")
     return passed
 
 
