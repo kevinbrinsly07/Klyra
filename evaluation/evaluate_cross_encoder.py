@@ -1,4 +1,3 @@
-
 """Evaluate cross-encoder reranking against standard hybrid retrieval."""
 
 import uuid
@@ -17,7 +16,6 @@ from app.services.keyword_search_service import keyword_search_service
 from app.services.hybrid_search_service import hybrid_search_service
 from app.vectorstore.chroma_service import chroma_service
 
-
 TOP_K = 3
 CANDIDATE_K = 10
 MIN_SIMILARITY = 0.50
@@ -34,11 +32,13 @@ def build_synthetic_corpus():
         for index, chunk in enumerate(source["chunks"]):
             ids.append(chunk["chunk_id"])
             documents.append(chunk["content"])
-            metadatas.append({
-                "document_id": source["document_id"],
-                "filename": source["filename"],
-                "chunk_index": index,
-            })
+            metadatas.append(
+                {
+                    "document_id": source["document_id"],
+                    "filename": source["filename"],
+                    "chunk_index": index,
+                }
+            )
 
     return ids, documents, metadatas
 
@@ -57,15 +57,14 @@ def evaluate_results(case, chunk_ids):
         }
 
     useful = [
-        chunk_id for chunk_id in chunk_ids
+        chunk_id
+        for chunk_id in chunk_ids
         if chunk_id in direct or chunk_id in supporting
     ]
 
     precision = len(useful) / len(chunk_ids) if chunk_ids else 0.0
 
-    direct_found = [
-        chunk_id for chunk_id in chunk_ids if chunk_id in direct
-    ]
+    direct_found = [chunk_id for chunk_id in chunk_ids if chunk_id in direct]
 
     recall = len(set(direct_found)) / len(direct) if direct else 0.0
 
@@ -79,10 +78,13 @@ def evaluate_results(case, chunk_ids):
         "precision": precision,
         "recall": recall,
         "mrr": mrr,
-        "false_positives": len([
-            chunk_id for chunk_id in chunk_ids
-            if chunk_id not in direct and chunk_id not in supporting
-        ]),
+        "false_positives": len(
+            [
+                chunk_id
+                for chunk_id in chunk_ids
+                if chunk_id not in direct and chunk_id not in supporting
+            ]
+        ),
         "negative_correct": None,
     }
 
@@ -93,22 +95,15 @@ def build_summary(results):
 
     return {
         "precision": (
-            sum(r["precision"] for r in positive) / len(positive)
-            if positive else 0.0
+            sum(r["precision"] for r in positive) / len(positive) if positive else 0.0
         ),
         "recall": (
-            sum(r["recall"] for r in positive) / len(positive)
-            if positive else 0.0
+            sum(r["recall"] for r in positive) / len(positive) if positive else 0.0
         ),
-        "mrr": (
-            sum(r["mrr"] for r in positive) / len(positive)
-            if positive else 0.0
-        ),
+        "mrr": (sum(r["mrr"] for r in positive) / len(positive) if positive else 0.0),
         "positive_fp": sum(r["false_positives"] for r in positive),
         "negative_fp": sum(r["false_positives"] for r in negative),
-        "negative_correct": sum(
-            r["negative_correct"] for r in negative
-        ),
+        "negative_correct": sum(r["negative_correct"] for r in negative),
         "negative_total": len(negative),
     }
 
@@ -183,9 +178,7 @@ def evaluate():
             )
 
             candidate_ids = (candidates.get("ids") or [[]])[0]
-            candidate_documents = (
-                candidates.get("documents") or [[]]
-            )[0]
+            candidate_documents = (candidates.get("documents") or [[]])[0]
 
             # Baseline: use the original hybrid ranking.
             baseline_ids = candidate_ids[:TOP_K]
@@ -195,10 +188,7 @@ def evaluate():
             baseline_results.append(baseline_metric)
 
             # Cross-encoder: score each question and candidate chunk together.
-            pairs = [
-                (question, document)
-                for document in candidate_documents
-            ]
+            pairs = [(question, document) for document in candidate_documents]
 
             if pairs:
                 scores = cross_encoder.predict(pairs)
@@ -215,10 +205,7 @@ def evaluate():
                     reverse=True,
                 )
 
-                reranked_ids = [
-                    item["chunk_id"]
-                    for item in scored_candidates[:TOP_K]
-                ]
+                reranked_ids = [item["chunk_id"] for item in scored_candidates[:TOP_K]]
             else:
                 scored_candidates = []
                 reranked_ids = []
@@ -227,29 +214,29 @@ def evaluate():
             reranked_metric["should_find"] = case["should_find_answer"]
             reranked_results.append(reranked_metric)
 
-            print(
-                f"\nTest {index}/"
-                f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}"
-            )
+            print(f"\nTest {index}/" f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
             print(f"Question: {question}")
-            print(f"Hybrid top {TOP_K}: {baseline_ids}")
-            print("Cross-encoder ranking:")
 
+            print("All candidate scores:")
             for item in scored_candidates:
+                status = (
+                    "SELECTED"
+                    if item["chunk_id"] in reranked_ids
+                    else "FILTERED"
+                )
                 print(
                     f"  {item['chunk_id']}: "
-                    f"{item['score']:.4f}"
+                    f"{item['score']:.4f} [{status}]"
                 )
 
+            print(f"Selected chunks: {reranked_ids}")
+
+            for item in scored_candidates:
+                print(f"  {item['chunk_id']}: " f"{item['score']:.4f}")
+
             print(f"Cross-encoder top {TOP_K}: {reranked_ids}")
-            print(
-                f"Baseline precision: "
-                f"{baseline_metric['precision']:.2%}"
-            )
-            print(
-                f"Reranked precision: "
-                f"{reranked_metric['precision']:.2%}"
-            )
+            print(f"Baseline precision: " f"{baseline_metric['precision']:.2%}")
+            print(f"Reranked precision: " f"{reranked_metric['precision']:.2%}")
 
         baseline_summary = build_summary(baseline_results)
         reranked_summary = build_summary(reranked_results)
