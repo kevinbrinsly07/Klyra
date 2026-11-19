@@ -150,6 +150,19 @@ def run_threshold(threshold, cross_encoder):
         print(f"\nTest {index}/"
               f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
         print(f"Question: {question}")
+
+        print("All candidate scores:")
+        for item in scored_candidates:
+            status = (
+                "SELECTED"
+                if item["chunk_id"] in selected_ids
+                else "FILTERED"
+            )
+            print(
+                f"  {item['chunk_id']}: "
+                f"{item['score']:.4f} [{status}]"
+            )
+
         print(f"Selected chunks: {selected_ids}")
 
         if case["should_find_answer"]:
