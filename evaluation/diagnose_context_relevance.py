@@ -69,7 +69,7 @@ def diagnose_case(case, index):
     max_hybrid_score = max(hybrid_scores, default=0.0)
 
     print("\n" + "=" * 90)
-    print(f"TEST {index}/7")
+    print(f"TEST {index}/{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
     print(f"Question: {question}")
     print(f"Expected documents: {sorted(expected_ids)}")
     print(f"Meaningful query tokens: {sorted(query_tokens)}")

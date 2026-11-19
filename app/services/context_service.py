@@ -11,7 +11,7 @@ class ContextService:
         "it", "of", "on", "or", "the", "to", "what",
         "when", "where", "which", "who", "why", "with",
         "have", "has", "had", "was", "were", "will",
-        "would", "could", "should", "can", "do"
+        "would", "could", "should", "can", "do","sri", "lanka", "both",
     }
 
     NEAR_DUPLICATE_THRESHOLD = 0.90
