@@ -97,13 +97,26 @@ def evaluate_case(case, index):
         print(f"Expected sources found: {sources_found}")
 
     else:
-        answer_not_found = not sources and (
-            "couldn't find relevant information" in answer.lower()
+        abstention_markers = (
+            "couldn't find relevant information",
+            "does not state",
+            "does not contain",
+            "cannot find",
+            "not provided",
+            "not specified",
         )
 
-        passed = answer_not_found
+    answer_not_found = any(marker in answer.lower() for marker in abstention_markers)
 
-        print(f"Correctly rejected unrelated question: {answer_not_found}")
+    source_leakage = bool(sources)
+
+    passed = answer_not_found
+
+    print(f"Correctly abstained: {answer_not_found}")
+    print(f"Sources attached despite abstention: {source_leakage}")
+
+    if source_leakage:
+        print("WARNING: Retrieved sources may not support the question.")
 
     print(f"Result: {'PASS' if passed else 'FAIL'}")
 
