@@ -53,32 +53,35 @@ def normalize_text(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
 
 
-def evaluate_case(case, index):
-    """Run one question through the complete RAG pipeline."""
+def evaluate_case(case: dict[str, Any], index: int) -> bool:
+    """Run and score one evaluation case."""
 
     question = case["question"]
-    expected_ids = set(case["expected_document_ids"])
-    expected_terms = case["expected_terms"]
-    should_find = case["should_find_answer"]
+    should_find = case["should_find"]
+    expected_terms = case.get("expected_terms", case.get("expected_answer_terms", []))
+    expected_ids = set(case.get("expected_ids", case.get("expected_source_ids", [])))
 
-    result = rag_service.answer_question(
-        question=question,
-        top_k=3,
-    )
-
-    answer = result["answer"]
-    sources = result["sources"]
+    response = cast(Any, rag_service).query(question)
+    if isinstance(response, dict):
+        answer = str(response.get("answer", ""))
+        sources = response.get("sources", []) or []
+    else:
+        answer = str(getattr(response, "answer", response))
+        sources = getattr(response, "sources", []) or []
 
     normalized_answer = normalize_text(answer)
-
     source_ids = {
-        source["document_id"] for source in sources if source.get("document_id")
+        source_id
+        for source in sources
+        for source_id in (
+            source.get("chunk_id", source.get("id"))
+            if isinstance(source, dict)
+            else getattr(source, "chunk_id", getattr(source, "id", None)),
+        )
+        if source_id is not None
     }
 
-    print(f"\nTest {index}/{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
-    print(f"Question: {question}")
-    print(f"Answer: {answer}")
-    print(f"Sources: {[source['filename'] for source in sources]}")
+    print(f"\nTest {index}: {question}")
 
     if should_find:
         answer_found = all(
@@ -106,20 +109,19 @@ def evaluate_case(case, index):
             "not specified",
         )
 
-    answer_not_found = any(marker in answer.lower() for marker in abstention_markers)
+        answer_not_found = any(marker in answer.lower() for marker in abstention_markers)
 
-    source_leakage = bool(sources)
+        source_leakage = bool(sources)
 
-    passed = answer_not_found
+        passed = answer_not_found and not source_leakage
 
-    print(f"Correctly abstained: {answer_not_found}")
-    print(f"Sources attached despite abstention: {source_leakage}")
+        print(f"Correctly abstained: {answer_not_found}")
+        print(f"Sources attached despite abstention: {source_leakage}")
 
-    if source_leakage:
-        print("WARNING: Retrieved sources may not support the question.")
+        if source_leakage:
+            print("WARNING: Retrieved sources may not support the question.")
 
     print(f"Result: {'PASS' if passed else 'FAIL'}")
-
     return passed
 
 
