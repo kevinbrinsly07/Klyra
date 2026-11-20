@@ -16,6 +16,11 @@ class ChatRequest(BaseModel):
         description="Number of document chunks to retrieve"
     )
 
+    conversation_id: str | None = Field(
+        default=None,
+        description="Existing conversation ID for continuing a chat"
+    )
+
 
 class ChatSource(BaseModel):
     filename: str
@@ -25,5 +30,11 @@ class ChatSource(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
-    sources: list[ChatSource] = Field(default_factory=list)
+
+    sources: list[ChatSource] = Field(
+        default_factory=list
+    )
+
     model: str
+
+    conversation_id: str
