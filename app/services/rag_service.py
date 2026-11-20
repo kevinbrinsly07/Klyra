@@ -71,7 +71,7 @@ class RAGService:
         return hybrid_search_service.search(
             query=question,
             top_k=top_k,
-            min_similarity=0.50,
+            min_similarity=0.10,
             return_candidates=return_candidates,
         )
 
