@@ -96,10 +96,17 @@ def chat(request: ChatRequest):
             content=request.message,
         )
 
-        # Generate the answer using the existing RAG pipeline.
+        # Retrieve previous conversation messages.
+        history = conversation_service.get_history(
+            conversation_id=conversation_id,
+            limit=20,
+        )
+
+        # Generate an answer using conversation context.
         result = rag_service.answer_question(
             question=request.message,
             top_k=request.top_k,
+            history=history[:-1],
         )
 
         # Store the assistant's response.
