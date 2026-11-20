@@ -3,26 +3,96 @@
 
 import { useState } from "react";
 
+type ChatSource = {
+  filename: string;
+  document_id?: string | null;
+  distance?: number | null;
+};
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  sources?: ChatSource[];
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export default function Home() {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<
-    { role: "user" | "assistant"; content: string }[]
-  >([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSend() {
+  async function handleSend() {
     const trimmed = message.trim();
-    if (!trimmed) return;
+
+    if (!trimmed || loading) return;
+
+    if (!API_URL) {
+      setError("API URL is not configured. Check frontend/.env.local.");
+      return;
+    }
+
+    setMessage("");
+    setError("");
 
     setMessages((current) => [
       ...current,
       { role: "user", content: trimmed },
     ]);
-    setMessage("");
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: trimmed,
+          top_k: 3,
+          conversation_id: conversationId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Something went wrong while contacting Klyra."
+        );
+      }
+
+      setConversationId(data.conversation_id);
+
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: data.response,
+          sources: data.sources || [],
+        },
+      ]);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect to the Klyra API."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleNewChat() {
+    if (loading) return;
+
     setMessages([]);
     setMessage("");
+    setConversationId(null);
+    setError("");
   }
 
   return (
@@ -38,7 +108,8 @@ export default function Home() {
         <div className="px-4">
           <button
             onClick={handleNewChat}
-            className="flex w-full items-center gap-3 rounded-xl border border-zinc-700 px-4 py-3 text-sm font-medium transition hover:bg-zinc-800"
+            disabled={loading}
+            className="flex w-full items-center gap-3 rounded-xl border border-zinc-700 px-4 py-3 text-sm font-medium transition hover:bg-zinc-800 disabled:opacity-50"
           >
             <span className="text-xl">+</span>
             New chat
@@ -63,10 +134,11 @@ export default function Home() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Recent chats
           </p>
+
           {messages.length > 0 ? (
-            <button className="w-full truncate rounded-lg px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800">
-              {messages[0].content}
-            </button>
+            <p className="truncate rounded-lg px-3 py-2 text-sm text-zinc-300">
+              {messages.find((item) => item.role === "user")?.content}
+            </p>
           ) : (
             <p className="px-3 py-2 text-sm text-zinc-600">
               Your conversations will appear here.
@@ -93,7 +165,9 @@ export default function Home() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 font-bold text-white md:hidden">
               K
             </div>
-            <span className="text-sm font-semibold">New conversation</span>
+            <span className="text-sm font-semibold">
+              {messages.length > 0 ? "Conversation" : "New conversation"}
+            </span>
           </div>
           <span className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-500">
             AI Assistant
@@ -160,22 +234,64 @@ export default function Home() {
                       K
                     </div>
                   )}
-                  <div
-                    className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-7 ${
-                      item.role === "user"
-                        ? "bg-zinc-900 text-white"
-                        : "bg-zinc-100 text-zinc-800"
-                    }`}
-                  >
-                    {item.content}
+
+                  <div className="max-w-[85%]">
+                    <div
+                      className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-7 ${
+                        item.role === "user"
+                          ? "bg-zinc-900 text-white"
+                          : "bg-zinc-100 text-zinc-800"
+                      }`}
+                    >
+                      {item.content}
+                    </div>
+
+                    {item.role === "assistant" &&
+                      item.sources &&
+                      item.sources.length > 0 && (
+                        <div className="mt-3">
+                          <p className="mb-2 text-xs font-semibold text-zinc-500">
+                            Sources
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {item.sources.map((source, sourceIndex) => (
+                              <span
+                                key={`${source.document_id || source.filename}-${sourceIndex}`}
+                                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600"
+                              >
+                                {source.filename}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                   </div>
                 </div>
               ))}
+
+              {loading && (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white">
+                    K
+                  </div>
+                  <p className="text-sm text-zinc-500">
+                    Klyra is thinking...
+                  </p>
+                </div>
+              )}
+
+              <div id="chat-bottom" />
             </div>
           )}
         </div>
 
         <div className="shrink-0 px-4 pb-5 pt-3 sm:px-8">
+          {error && (
+            <p className="mx-auto mb-3 max-w-3xl rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -203,12 +319,13 @@ export default function Home() {
               }}
               placeholder="Ask anything about your documents..."
               rows={1}
-              className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400"
+              disabled={loading}
+              className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400 disabled:opacity-50"
             />
 
             <button
               type="submit"
-              disabled={!message.trim()}
+              disabled={!message.trim() || loading}
               aria-label="Send message"
               className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
             >

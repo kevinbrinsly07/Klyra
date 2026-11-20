@@ -21,10 +21,23 @@ from app.services.rag_service import rag_service
 from app.services.conversation_service import ConversationService
 from app.routers.documents import router as documents_router
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Klyra AI",
     description="An intelligent knowledge assistant powered by RAG.",
     version="0.2.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(documents_router)
