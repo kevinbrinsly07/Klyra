@@ -12,7 +12,9 @@ class ConversationService:
         self._initialize_database()
 
     def _get_connection(self):
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
     def _initialize_database(self):
         with self._get_connection() as conn:
