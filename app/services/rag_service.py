@@ -75,6 +75,50 @@ class RAGService:
             return_candidates=return_candidates,
         )
 
+    def contextualize_question(
+        self,
+        question: str,
+        history: list[dict],
+    ) -> str:
+
+        if not history:
+            return question
+
+        conversation = "\n".join(
+            f"{message['role']}: {message['content']}"
+            for message in history[-10:]
+            if message.get("role") in ("user", "assistant")
+        )
+
+        prompt = f"""
+You are a query contextualization assistant.
+
+Your task is to rewrite the latest user question as a
+standalone question using the conversation history.
+
+RULES:
+1. Preserve the user's original intent.
+2. Resolve references such as "it", "that", "the second one",
+   and "what about this?" using conversation history.
+3. Do not answer the question.
+4. Do not introduce new facts or assumptions.
+5. If the question is already standalone, return it unchanged.
+6. Return only the rewritten question.
+
+CONVERSATION HISTORY:
+{conversation}
+
+LATEST USER QUESTION:
+{question}
+
+STANDALONE QUESTION:
+"""
+
+        contextualized_question = llm_service.generate_response(prompt)
+
+        return contextualized_question.strip() or question
+    
+
     def answer_question(self, question: str, top_k: int = 3):
 
         results = self.retrieve_documents(question, top_k, return_candidates=True)
