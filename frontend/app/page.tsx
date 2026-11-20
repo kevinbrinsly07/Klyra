@@ -15,8 +15,6 @@ type ChatMessage = {
   sources?: ChatSource[];
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -29,11 +27,6 @@ export default function Home() {
 
     if (!trimmed || loading) return;
 
-    if (!API_URL) {
-      setError("API URL is not configured. Check frontend/.env.local.");
-      return;
-    }
-
     setMessage("");
     setError("");
 
@@ -45,7 +38,10 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/chat`, {
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      const response = await fetch(`${apiUrl}/api/v1/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -57,13 +53,14 @@ export default function Home() {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
         throw new Error(
-          data.detail || "Something went wrong while contacting Klyra."
+          errorData?.detail || `Request failed (${response.status})`,
         );
       }
+
+      const data = await response.json();
 
       setConversationId(data.conversation_id);
 
@@ -79,7 +76,7 @@ export default function Home() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to connect to the Klyra API."
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -87,8 +84,6 @@ export default function Home() {
   }
 
   function handleNewChat() {
-    if (loading) return;
-
     setMessages([]);
     setMessage("");
     setConversationId(null);
@@ -108,8 +103,7 @@ export default function Home() {
         <div className="px-4">
           <button
             onClick={handleNewChat}
-            disabled={loading}
-            className="flex w-full items-center gap-3 rounded-xl border border-zinc-700 px-4 py-3 text-sm font-medium transition hover:bg-zinc-800 disabled:opacity-50"
+            className="flex w-full items-center gap-3 rounded-xl border border-zinc-700 px-4 py-3 text-sm font-medium transition hover:bg-zinc-800"
           >
             <span className="text-xl">+</span>
             New chat
@@ -134,7 +128,6 @@ export default function Home() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Recent chats
           </p>
-
           {messages.length > 0 ? (
             <p className="truncate rounded-lg px-3 py-2 text-sm text-zinc-300">
               {messages.find((item) => item.role === "user")?.content}
@@ -166,7 +159,7 @@ export default function Home() {
               K
             </div>
             <span className="text-sm font-semibold">
-              {messages.length > 0 ? "Conversation" : "New conversation"}
+              {conversationId ? "Conversation" : "New conversation"}
             </span>
           </div>
           <span className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-500">
@@ -249,14 +242,14 @@ export default function Home() {
                     {item.role === "assistant" &&
                       item.sources &&
                       item.sources.length > 0 && (
-                        <div className="mt-3">
+                        <div className="mt-3 px-1">
                           <p className="mb-2 text-xs font-semibold text-zinc-500">
                             Sources
                           </p>
                           <div className="flex flex-wrap gap-2">
                             {item.sources.map((source, sourceIndex) => (
                               <span
-                                key={`${source.document_id || source.filename}-${sourceIndex}`}
+                                key={`${source.filename}-${sourceIndex}`}
                                 className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600"
                               >
                                 {source.filename}
@@ -274,13 +267,11 @@ export default function Home() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white">
                     K
                   </div>
-                  <p className="text-sm text-zinc-500">
-                    Klyra is thinking...
-                  </p>
+                  <div className="rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-500">
+                    Thinking...
+                  </div>
                 </div>
               )}
-
-              <div id="chat-bottom" />
             </div>
           )}
         </div>
@@ -320,7 +311,7 @@ export default function Home() {
               placeholder="Ask anything about your documents..."
               rows={1}
               disabled={loading}
-              className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400 disabled:opacity-50"
+              className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400"
             />
 
             <button
