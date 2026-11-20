@@ -169,3 +169,24 @@ class ConversationService:
             }
             for row in rows
         ]
+
+    def rename_conversation(
+        self,
+        conversation_id: str,
+        title: str,
+    ) -> bool:
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE conversations
+                SET title = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    title,
+                    datetime.now(timezone.utc).isoformat(),
+                    conversation_id,
+                ),
+            )
+
+        return cursor.rowcount > 0
