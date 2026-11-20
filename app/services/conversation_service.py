@@ -1,4 +1,3 @@
-
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -19,18 +18,19 @@ class ConversationService:
         with self._get_connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS conversations (
-                                columns = {
+                    id TEXT PRIMARY KEY,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+
+            columns = {
                 row[1]
-                for row in conn.execute(
-                    "PRAGMA table_info(conversations)"
-                ).fetchall()
+                for row in conn.execute("PRAGMA table_info(conversations)").fetchall()
             }
 
             if "title" not in columns:
-                conn.execute(
-                    "ALTER TABLE conversations ADD COLUMN title TEXT"
-                )
-            """)
+                conn.execute("ALTER TABLE conversations ADD COLUMN title TEXT")
 
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
