@@ -1,69 +1,226 @@
-import Image from "next/image";
+
+"use client";
+
+import { useState } from "react";
 
 export default function Home() {
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<
+    { role: "user" | "assistant"; content: string }[]
+  >([]);
+
+  function handleSend() {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    setMessages((current) => [
+      ...current,
+      { role: "user", content: trimmed },
+    ]);
+    setMessage("");
+  }
+
+  function handleNewChat() {
+    setMessages([]);
+    setMessage("");
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="flex h-screen overflow-hidden bg-white text-zinc-900">
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-zinc-800 bg-[#171717] text-white md:flex">
+        <div className="flex items-center gap-3 px-6 py-6">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-lg font-bold text-black">
+            K
+          </div>
+          <span className="text-xl font-semibold tracking-tight">Klyra</span>
+        </div>
+
+        <div className="px-4">
+          <button
+            onClick={handleNewChat}
+            className="flex w-full items-center gap-3 rounded-xl border border-zinc-700 px-4 py-3 text-sm font-medium transition hover:bg-zinc-800"
+          >
+            <span className="text-xl">+</span>
+            New chat
+          </button>
+        </div>
+
+        <div className="mt-8 px-5">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Workspace
+          </p>
+          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-300 hover:bg-zinc-800">
+            <span>▤</span>
+            Documents
+          </button>
+          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-300 hover:bg-zinc-800">
+            <span>⌘</span>
+            Search
+          </button>
+        </div>
+
+        <div className="mt-8 flex-1 overflow-y-auto px-5">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Recent chats
+          </p>
+          {messages.length > 0 ? (
+            <button className="w-full truncate rounded-lg px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800">
+              {messages[0].content}
+            </button>
+          ) : (
+            <p className="px-3 py-2 text-sm text-zinc-600">
+              Your conversations will appear here.
+            </p>
+          )}
+        </div>
+
+        <div className="border-t border-zinc-800 p-4">
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold">
+              K
+            </div>
+            <div>
+              <p className="text-sm font-medium">My workspace</p>
+              <p className="text-xs text-zinc-500">Personal account</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-100 px-5 md:px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 font-bold text-white md:hidden">
+              K
+            </div>
+            <span className="text-sm font-semibold">New conversation</span>
+          </div>
+          <span className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-500">
+            AI Assistant
+          </span>
+        </header>
+
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center px-6 pb-16 text-center">
+              <div className="mb-7 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 text-3xl font-bold text-white shadow-lg">
+                K
+              </div>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                What can I help you with?
+              </h1>
+              <p className="mt-3 max-w-md text-sm leading-6 text-zinc-500">
+                Ask questions about your documents and get clear,
+                context-aware answers powered by your knowledge base.
+              </p>
+
+              <div className="mt-10 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+                {[
+                  {
+                    title: "Explore my documents",
+                    description: "What information is available?",
+                  },
+                  {
+                    title: "Summarize a topic",
+                    description: "Give me the key points.",
+                  },
+                  {
+                    title: "Find specific information",
+                    description: "Search across my knowledge base.",
+                  },
+                  {
+                    title: "Ask a follow-up",
+                    description: "Continue where I left off.",
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.title}
+                    onClick={() => setMessage(item.description)}
+                    className="rounded-xl border border-zinc-200 p-4 text-left transition hover:border-zinc-400 hover:bg-zinc-50"
+                  >
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {item.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-7 px-5 py-10">
+              {messages.map((item, index) => (
+                <div
+                  key={index}
+                  className={`flex gap-4 ${
+                    item.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  {item.role === "assistant" && (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white">
+                      K
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-7 ${
+                      item.role === "user"
+                        ? "bg-zinc-900 text-white"
+                        : "bg-zinc-100 text-zinc-800"
+                    }`}
+                  >
+                    {item.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="shrink-0 px-4 pb-5 pt-3 sm:px-8">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSend();
+            }}
+            className="mx-auto flex max-w-3xl items-end gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm transition focus-within:border-zinc-400 focus-within:shadow-md"
+          >
+            <button
+              type="button"
+              aria-label="Attach a document"
+              title="Document upload coming soon"
+              className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              +
+            </button>
+
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Ask anything about your documents..."
+              rows={1}
+              className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400"
+            />
+
+            <button
+              type="submit"
+              disabled={!message.trim()}
+              aria-label="Send message"
+              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
             >
-              Learning
-            </a>{" "}
-            center.
+              ↑
+            </button>
+          </form>
+          <p className="mt-3 text-center text-[11px] text-zinc-400">
+            Klyra can make mistakes. Verify important information with your
+            source documents.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }
