@@ -23,6 +23,12 @@ type ConversationSummary = {
   last_message: string | null;
 };
 
+type DocumentItem = {
+  document_id: string;
+  filename: string;
+  total_chunks: number;
+};
+
 export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -30,6 +36,55 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadDocuments() {
+      try {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+        const response = await fetch(
+          `${apiUrl}/api/v1/documents/?limit=100&offset=0`,
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load documents");
+        }
+
+        const data = await response.json();
+        setDocuments(data.documents);
+      } catch (err) {
+        console.error("Document loading error:", err);
+      }
+    }
+
+    loadDocuments();
+  }, []);
+
+  async function refreshDocuments() {
+    setDocumentsLoading(true);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      const response = await fetch(
+        `${apiUrl}/api/v1/documents/?limit=100&offset=0`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load documents");
+      }
+
+      const data = await response.json();
+      setDocuments(data.documents);
+    } catch (err) {
+      console.error("Document loading error:", err);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }
 
   async function refreshConversations() {
     try {
