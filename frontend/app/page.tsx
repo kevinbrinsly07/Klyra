@@ -40,6 +40,46 @@ export default function Home() {
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [view, setView] = useState<"chat" | "documents">("chat");
 
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+
+  async function handleDocumentUpload(file: File) {
+    setUploading(true);
+    setUploadError("");
+    setUploadSuccess("");
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${apiUrl}/api/v1/documents/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Document upload failed.");
+      }
+
+      setUploadSuccess(
+        `${data.filename} uploaded successfully. ${data.total_chunks} chunks indexed.`,
+      );
+
+      await refreshDocuments();
+    } catch (err) {
+      setUploadError(
+        err instanceof Error ? err.message : "Document upload failed.",
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
   useEffect(() => {
     async function loadDocuments() {
       try {
@@ -351,6 +391,48 @@ export default function Home() {
                 <p className="mt-2 text-sm text-zinc-500">
                   Manage the documents in your Klyra knowledge base.
                 </p>
+
+                <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-800">
+                        Upload a PDF document
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Maximum file size: 10 MB
+                      </p>
+                    </div>
+
+                    <label className="cursor-pointer rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700">
+                      {uploading ? "Uploading..." : "Choose PDF"}
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        disabled={uploading}
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+
+                          if (file) {
+                            void handleDocumentUpload(file);
+                          }
+
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {uploadError && (
+                    <p className="mt-3 text-sm text-red-600">{uploadError}</p>
+                  )}
+
+                  {uploadSuccess && (
+                    <p className="mt-3 text-sm text-green-700">
+                      {uploadSuccess}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="mb-6 flex items-center justify-between">
