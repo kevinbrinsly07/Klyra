@@ -1,50 +1,67 @@
 
+import pytest
+
 from app.services.document_service import document_service
 
 
-# Generate sample text containing many sentences.
-sample_text = " ".join(
-    [
+def generate_sample_text(sentence_count=300):
+    return " ".join(
         f"Sentence number {i} contains information about "
         f"artificial intelligence, document processing, "
         f"and knowledge retrieval."
-        for i in range(1, 301)
-    ]
-)
+        for i in range(1, sentence_count + 1)
+    )
 
-# Test chunk generation.
-chunks = document_service.split_into_chunks(
-    text=sample_text,
-    chunk_size=100,
-    chunk_overlap=20
-)
 
-print("\nCHUNKING TEST")
-print("=============")
+def test_chunks_do_not_exceed_configured_size():
+    text = generate_sample_text()
 
-print("Total chunks:", len(chunks))
+    chunks = document_service.split_into_chunks(
+        text,
+        chunk_size=100,
+        chunk_overlap=20,
+    )
 
-for index, chunk in enumerate(chunks):
+    assert len(chunks) > 1
+    assert all(len(chunk.split()) <= 100 for chunk in chunks)
 
-    word_count = len(chunk.split())
 
-    print(f"\nChunk {index + 1}")
-    print("Word count:", word_count)
-    print("Preview:", chunk[:150])
+def test_chunks_preserve_configured_overlap():
+    text = generate_sample_text()
 
-    assert word_count <= 100, "Chunk exceeds maximum size!"
+    chunks = document_service.split_into_chunks(
+        text,
+        chunk_size=100,
+        chunk_overlap=20,
+    )
 
-# Verify overlap between consecutive chunks.
-for index in range(len(chunks) - 1):
+    for previous, current in zip(chunks, chunks[1:]):
+        assert previous.split()[-20:] == current.split()[:20]
 
-    previous_words = chunks[index].split()
-    next_words = chunks[index + 1].split()
 
-    assert (
-        previous_words[-20:] == next_words[:20]
-    ), "Chunk overlap is incorrect!"
+def test_default_chunk_size():
+    text = generate_sample_text()
 
-# Test empty document.
-assert document_service.split_into_chunks("") == []
+    chunks = document_service.split_into_chunks(text)
 
-print("\nAll chunking tests passed!")
+    assert len(chunks) > 1
+    assert all(len(chunk.split()) <= 300 for chunk in chunks)
+
+
+def test_empty_document_returns_no_chunks():
+    assert document_service.split_into_chunks("") == []
+    assert document_service.split_into_chunks("   ") == []
+
+
+def test_invalid_chunk_size_raises_error():
+    with pytest.raises(ValueError):
+        document_service.split_into_chunks("Some text.", chunk_size=0)
+
+
+def test_invalid_overlap_raises_error():
+    with pytest.raises(ValueError):
+        document_service.split_into_chunks(
+            "Some text.",
+            chunk_size=100,
+            chunk_overlap=100,
+        )
