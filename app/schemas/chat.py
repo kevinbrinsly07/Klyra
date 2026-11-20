@@ -40,3 +40,17 @@ class ConversationMessage(BaseModel):
 class ConversationHistoryResponse(BaseModel):
     conversation_id: str
     messages: list[ConversationMessage] = Field(default_factory=list)
+
+
+class ConversationSummary(BaseModel):
+    id: str
+    created_at: str
+    updated_at: str
+    message_count: int
+    last_message: str | None = None
+
+
+class ConversationListResponse(BaseModel):
+    conversations: list[ConversationSummary] = Field(default_factory=list)
+    limit: int
+    offset: int

@@ -13,6 +13,8 @@ from app.schemas.chat import (
     ChatResponse,
     ConversationMessage,
     ConversationHistoryResponse,
+    ConversationListResponse,
+    ConversationSummary,
 )
 from app.services.rag_service import rag_service
 from app.services.conversation_service import ConversationService
@@ -66,6 +68,38 @@ def get_conversation_history(conversation_id: str):
     return ConversationHistoryResponse(
         conversation_id=conversation_id,
         messages=cast(list[ConversationMessage], messages),
+    )
+
+
+@app.get(
+    "/api/v1/conversations",
+    response_model=ConversationListResponse,
+)
+def list_conversations(
+    limit: int = 20,
+    offset: int = 0,
+):
+    if limit < 1 or limit > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Limit must be between 1 and 100.",
+        )
+
+    if offset < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Offset cannot be negative.",
+        )
+
+    conversations = conversation_service.list_conversations(
+        limit=limit,
+        offset=offset,
+    )
+
+    return ConversationListResponse(
+        conversations=cast(list[ConversationSummary], conversations),
+        limit=limit,
+        offset=offset,
     )
 
 
