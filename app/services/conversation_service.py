@@ -120,3 +120,45 @@ class ConversationService:
             }
             for role, content, created_at in rows
         ]
+
+    def list_conversations(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[dict]:
+
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    c.id,
+                    c.created_at,
+                    c.updated_at,
+                    COUNT(m.id) AS message_count,
+                    (
+                        SELECT content
+                        FROM messages
+                        WHERE conversation_id = c.id
+                        ORDER BY id DESC
+                        LIMIT 1
+                    ) AS last_message
+                FROM conversations c
+                LEFT JOIN messages m
+                    ON m.conversation_id = c.id
+                GROUP BY c.id
+                ORDER BY c.updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            ).fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "created_at": row[1],
+                "updated_at": row[2],
+                "message_count": row[3],
+                "last_message": row[4],
+            }
+            for row in rows
+        ]
