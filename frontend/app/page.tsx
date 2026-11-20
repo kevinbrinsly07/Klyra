@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type ChatSource = {
   filename: string;
@@ -15,12 +14,46 @@ type ChatMessage = {
   sources?: ChatSource[];
 };
 
+type ConversationSummary = {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  last_message: string | null;
+};
+
 export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+
+  useEffect(() => {
+    async function loadConversations() {
+      try {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+        const response = await fetch(
+          `${apiUrl}/api/v1/conversations?limit=20&offset=0`,
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load conversations");
+        }
+
+        const data = await response.json();
+        setConversations(data.conversations);
+      } catch (err) {
+        console.error("Conversation loading error:", err);
+      }
+    }
+
+    loadConversations();
+  }, []);
 
   async function handleSend() {
     const trimmed = message.trim();
@@ -30,16 +63,12 @@ export default function Home() {
     setMessage("");
     setError("");
 
-    setMessages((current) => [
-      ...current,
-      { role: "user", content: trimmed },
-    ]);
+    setMessages((current) => [...current, { role: "user", content: trimmed }]);
 
     setLoading(true);
 
     try {
-      const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
       const response = await fetch(`${apiUrl}/api/v1/chat`, {
         method: "POST",
@@ -128,10 +157,20 @@ export default function Home() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Recent chats
           </p>
-          {messages.length > 0 ? (
-            <p className="truncate rounded-lg px-3 py-2 text-sm text-zinc-300">
-              {messages.find((item) => item.role === "user")?.content}
-            </p>
+
+          {conversations.length > 0 ? (
+            <div className="space-y-1">
+              {conversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  className="truncate rounded-lg px-3 py-2 text-sm text-zinc-300"
+                >
+                  {conversation.title ||
+                    conversation.last_message ||
+                    "New conversation"}
+                </div>
+              ))}
+            </div>
           ) : (
             <p className="px-3 py-2 text-sm text-zinc-600">
               Your conversations will appear here.
@@ -177,8 +216,8 @@ export default function Home() {
                 What can I help you with?
               </h1>
               <p className="mt-3 max-w-md text-sm leading-6 text-zinc-500">
-                Ask questions about your documents and get clear,
-                context-aware answers powered by your knowledge base.
+                Ask questions about your documents and get clear, context-aware
+                answers powered by your knowledge base.
               </p>
 
               <div className="mt-10 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
