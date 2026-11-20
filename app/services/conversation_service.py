@@ -96,12 +96,22 @@ class ConversationService:
             conn.execute(
                 """
                 UPDATE conversations
-                SET updated_at = ?
+                SET
+                    updated_at = ?,
+                    title = CASE
+                        WHEN title IS NULL AND ? = 'user'
+                        THEN ?
+                        ELSE title
+                    END
                 WHERE id = ?
                 """,
-                (timestamp, conversation_id),
+                (
+                    timestamp,
+                    role,
+                    content.strip()[:100],
+                    conversation_id,
+                ),
             )
-
 
     def get_history(
         self,
