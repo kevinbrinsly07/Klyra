@@ -44,6 +44,7 @@ class ConversationHistoryResponse(BaseModel):
 
 class ConversationSummary(BaseModel):
     id: str
+    title: str | None = None
     created_at: str
     updated_at: str
     message_count: int

@@ -139,6 +139,7 @@ class ConversationService:
                 """
                 SELECT
                     c.id,
+                    c.title,
                     c.created_at,
                     c.updated_at,
                     COUNT(m.id) AS message_count,
@@ -162,10 +163,11 @@ class ConversationService:
         return [
             {
                 "id": row[0],
-                "created_at": row[1],
-                "updated_at": row[2],
-                "message_count": row[3],
-                "last_message": row[4],
+                "title": row[1],
+                "created_at": row[2],
+                "updated_at": row[3],
+                "message_count": row[4],
+                "last_message": row[5],
             }
             for row in rows
         ]
