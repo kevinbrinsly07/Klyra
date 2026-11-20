@@ -1,4 +1,3 @@
-
 import re
 
 from pypdf import PdfReader
@@ -23,10 +22,7 @@ class DocumentService:
         return "\n\n".join(pages)
 
     def split_into_chunks(
-        self,
-        text: str,
-        chunk_size: int = 800,
-        chunk_overlap: int = 150
+        self, text: str, chunk_size: int = 300, chunk_overlap: int = 50
     ) -> list[str]:
         """
         Split text into sentence-aware chunks with word-based overlap.
@@ -44,18 +40,13 @@ class DocumentService:
             raise ValueError("chunk_size must be positive")
 
         if chunk_overlap < 0 or chunk_overlap >= chunk_size:
-            raise ValueError(
-                "chunk_overlap must be between 0 and chunk_size"
-            )
+            raise ValueError("chunk_overlap must be between 0 and chunk_size")
 
         if not text or not text.strip():
             return []
 
         # Split at sentence endings and paragraph boundaries.
-        sentences = re.split(
-            r"(?<=[.!?।෴])\s+|\n+",
-            text.strip()
-        )
+        sentences = re.split(r"(?<=[.!?।෴])\s+|\n+", text.strip())
 
         chunks = []
         current_words = []
@@ -93,14 +84,9 @@ class DocumentService:
                         available_space = chunk_size - len(current_words)
 
                     # Handle sentences longer than the remaining space.
-                    words_to_add = min(
-                        available_space,
-                        len(sentence_words)
-                    )
+                    words_to_add = min(available_space, len(sentence_words))
 
-                    current_words.extend(
-                        sentence_words[:words_to_add]
-                    )
+                    current_words.extend(sentence_words[:words_to_add])
 
                     sentence_words = sentence_words[words_to_add:]
 
