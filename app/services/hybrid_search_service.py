@@ -10,7 +10,7 @@ class HybridSearchService:
         self,
         query: str,
         top_k: int = 3,
-        min_similarity: float = 0.50,
+        min_similarity: float | None = 0.50,
         rrf_k: int = 60,
         return_candidates: bool = False,
     ) -> dict:
@@ -21,7 +21,7 @@ class HybridSearchService:
         if not 1 <= top_k <= 10:
             raise ValueError("top_k must be between 1 and 10.")
 
-        if not 0 <= min_similarity <= 1:
+        if min_similarity is not None and not 0 <= min_similarity <= 1:
             raise ValueError("min_similarity must be between 0 and 1.")
 
         if rrf_k <= 0:
