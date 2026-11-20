@@ -52,18 +52,34 @@ def health():
 @app.get(
     "/api/v1/conversations/{conversation_id}/messages",
     response_model=ConversationHistoryResponse,
-    tags=["AI Chat"],
 )
-def get_conversation_history(conversation_id: str):
-
+def get_conversation_history(
+    conversation_id: str,
+    limit: int = 20,
+    offset: int = 0,
+):
     if not conversation_service.conversation_exists(conversation_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="Conversation not found.",
+        )
+
+    if limit < 1 or limit > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Limit must be between 1 and 100.",
+        )
+
+    if offset < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Offset cannot be negative.",
         )
 
     messages = conversation_service.get_history(
         conversation_id=conversation_id,
+        limit=limit,
+        offset=offset,
     )
 
     return ConversationHistoryResponse(
