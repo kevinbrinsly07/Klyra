@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, HTTPException, status
 from openai import (
     APIConnectionError,
@@ -6,13 +5,18 @@ from openai import (
     APITimeoutError,
     RateLimitError,
 )
+from typing import cast
 
 from app.core.config import settings
-from app.schemas.chat import ChatRequest, ChatResponse
+from app.schemas.chat import (
+    ChatRequest,
+    ChatResponse,
+    ConversationMessage,
+    ConversationHistoryResponse,
+)
 from app.services.rag_service import rag_service
 from app.services.conversation_service import ConversationService
 from app.routers.documents import router as documents_router
-
 
 app = FastAPI(
     title="Klyra AI",
@@ -40,6 +44,29 @@ def health():
         "status": "healthy",
         "model": settings.OPENAI_MODEL,
     }
+
+
+@app.get(
+    "/api/v1/conversations/{conversation_id}/messages",
+    response_model=ConversationHistoryResponse,
+    tags=["AI Chat"],
+)
+def get_conversation_history(conversation_id: str):
+
+    if not conversation_service.conversation_exists(conversation_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        )
+
+    messages = conversation_service.get_history(
+        conversation_id=conversation_id,
+    )
+
+    return ConversationHistoryResponse(
+        conversation_id=conversation_id,
+        messages=cast(list[ConversationMessage], messages),
+    )
 
 
 @app.post(
