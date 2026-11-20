@@ -80,6 +80,39 @@ export default function Home() {
     }
   }
 
+  async function handleDeleteDocument(documentId: string) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this document? This action cannot be undone.",
+    );
+
+    if (!confirmed) return;
+
+    setUploadError("");
+    setUploadSuccess("");
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Document deletion failed.");
+      }
+
+      setUploadSuccess("Document deleted successfully.");
+
+      await refreshDocuments();
+    } catch (err) {
+      setUploadError(
+        err instanceof Error ? err.message : "Document deletion failed.",
+      );
+    }
+  }
+
   useEffect(() => {
     async function loadDocuments() {
       try {
@@ -478,9 +511,20 @@ export default function Home() {
                         </p>
                       </div>
 
-                      <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">
-                        PDF
-                      </span>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">
+                          PDF
+                        </span>
+
+                        <button
+                          onClick={() =>
+                            void handleDeleteDocument(document.document_id)
+                          }
+                          className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
