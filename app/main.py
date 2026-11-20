@@ -10,6 +10,7 @@ from openai import (
 from app.core.config import settings
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.rag_service import rag_service
+from app.services.conversation_service import ConversationService
 from app.routers.documents import router as documents_router
 
 
@@ -20,6 +21,8 @@ app = FastAPI(
 )
 
 app.include_router(documents_router)
+
+conversation_service = ConversationService()
 
 
 @app.get("/")
@@ -47,16 +50,47 @@ def health():
 def chat(request: ChatRequest):
 
     try:
+        # Create a new conversation or validate the supplied ID.
+        conversation_id = request.conversation_id
+
+        if conversation_id is None:
+            conversation_id = conversation_service.create_conversation()
+
+        elif not conversation_service.conversation_exists(conversation_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found.",
+            )
+
+        # Store the user's message.
+        conversation_service.add_message(
+            conversation_id=conversation_id,
+            role="user",
+            content=request.message,
+        )
+
+        # Generate the answer using the existing RAG pipeline.
         result = rag_service.answer_question(
             question=request.message,
             top_k=request.top_k,
+        )
+
+        # Store the assistant's response.
+        conversation_service.add_message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=result["answer"],
         )
 
         return ChatResponse(
             response=result["answer"],
             sources=result["sources"],
             model=settings.OPENAI_MODEL,
+            conversation_id=conversation_id,
         )
+
+    except HTTPException:
+        raise
 
     except ValueError as error:
         raise HTTPException(
