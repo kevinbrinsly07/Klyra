@@ -137,6 +137,24 @@ def rename_conversation(
     }
 
 
+@app.delete("/api/v1/conversations/{conversation_id}")
+def delete_conversation(conversation_id: str):
+    deleted = conversation_service.delete_conversation(
+        conversation_id=conversation_id,
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found.",
+        )
+
+    return {
+        "message": "Conversation deleted successfully.",
+        "conversation_id": conversation_id,
+    }
+
+
 @app.post(
     "/api/v1/chat",
     response_model=ChatResponse,
