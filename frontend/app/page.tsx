@@ -38,6 +38,7 @@ export default function Home() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [view, setView] = useState<"chat" | "documents">("chat");
 
   useEffect(() => {
     async function loadDocuments() {
@@ -230,6 +231,7 @@ export default function Home() {
     setMessage("");
     setConversationId(null);
     setError("");
+    setView("chat");
   }
 
   return (
@@ -256,7 +258,17 @@ export default function Home() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Workspace
           </p>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-300 hover:bg-zinc-800">
+          <button
+            onClick={() => {
+              setView("documents");
+              void refreshDocuments();
+            }}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${
+              view === "documents"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
             <span>▤</span>
             Documents
           </button>
@@ -317,7 +329,11 @@ export default function Home() {
               K
             </div>
             <span className="text-sm font-semibold">
-              {conversationId ? "Conversation" : "New conversation"}
+              {view === "documents"
+                ? "Documents"
+                : conversationId
+                  ? "Conversation"
+                  : "New conversation"}
             </span>
           </div>
           <span className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-500">
@@ -326,7 +342,69 @@ export default function Home() {
         </header>
 
         <div className="flex flex-1 flex-col overflow-y-auto">
-          {messages.length === 0 ? (
+          {view === "documents" ? (
+            <div className="mx-auto w-full max-w-4xl px-6 py-10">
+              <div className="mb-8">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Your documents
+                </h1>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Manage the documents in your Klyra knowledge base.
+                </p>
+              </div>
+
+              <div className="mb-6 flex items-center justify-between">
+                <p className="text-sm font-medium text-zinc-700">
+                  {documents.length} documents
+                </p>
+
+                <button
+                  onClick={() => void refreshDocuments()}
+                  disabled={documentsLoading}
+                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {documentsLoading ? (
+                <p className="py-10 text-center text-sm text-zinc-500">
+                  Loading documents...
+                </p>
+              ) : documents.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-zinc-300 px-6 py-16 text-center">
+                  <p className="text-sm font-medium text-zinc-700">
+                    No documents uploaded yet
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-500">
+                    Upload a PDF to start building your knowledge base.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200">
+                  {documents.map((document) => (
+                    <div
+                      key={document.document_id}
+                      className="flex items-center justify-between gap-4 p-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-zinc-800">
+                          {document.filename}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {document.total_chunks} indexed chunks
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">
+                        PDF
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center px-6 pb-16 text-center">
               <div className="mb-7 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 text-3xl font-bold text-white shadow-lg">
                 K
@@ -433,59 +511,60 @@ export default function Home() {
             </div>
           )}
         </div>
+        {view === "chat" && (
+          <div className="shrink-0 px-4 pb-5 pt-3 sm:px-8">
+            {error && (
+              <p className="mx-auto mb-3 max-w-3xl rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </p>
+            )}
 
-        <div className="shrink-0 px-4 pb-5 pt-3 sm:px-8">
-          {error && (
-            <p className="mx-auto mb-3 max-w-3xl rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
-            </p>
-          )}
-
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleSend();
-            }}
-            className="mx-auto flex max-w-3xl items-end gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm transition focus-within:border-zinc-400 focus-within:shadow-md"
-          >
-            <button
-              type="button"
-              aria-label="Attach a document"
-              title="Document upload coming soon"
-              className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
-            >
-              +
-            </button>
-
-            <textarea
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  handleSend();
-                }
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleSend();
               }}
-              placeholder="Ask anything about your documents..."
-              rows={1}
-              disabled={loading}
-              className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400"
-            />
-
-            <button
-              type="submit"
-              disabled={!message.trim() || loading}
-              aria-label="Send message"
-              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
+              className="mx-auto flex max-w-3xl items-end gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm transition focus-within:border-zinc-400 focus-within:shadow-md"
             >
-              ↑
-            </button>
-          </form>
-          <p className="mt-3 text-center text-[11px] text-zinc-400">
-            Klyra can make mistakes. Verify important information with your
-            source documents.
-          </p>
-        </div>
+              <button
+                type="button"
+                aria-label="Attach a document"
+                title="Document upload coming soon"
+                className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+              >
+                +
+              </button>
+
+              <textarea
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Ask anything about your documents..."
+                rows={1}
+                disabled={loading}
+                className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-zinc-400"
+              />
+
+              <button
+                type="submit"
+                disabled={!message.trim() || loading}
+                aria-label="Send message"
+                className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
+              >
+                ↑
+              </button>
+            </form>
+            <p className="mt-3 text-center text-[11px] text-zinc-400">
+              Klyra can make mistakes. Verify important information with your
+              source documents.
+            </p>
+          </div>
+        )}
       </section>
     </main>
   );
