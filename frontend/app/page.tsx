@@ -31,6 +31,25 @@ export default function Home() {
   const [error, setError] = useState("");
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
 
+  async function refreshConversations() {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      const response = await fetch(
+        `${apiUrl}/api/v1/conversations?limit=20&offset=0`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load conversations");
+      }
+
+      const data = await response.json();
+      setConversations(data.conversations);
+    } catch (err) {
+      console.error("Conversation loading error:", err);
+    }
+  }
+
   useEffect(() => {
     async function loadConversations() {
       try {
@@ -130,6 +149,7 @@ export default function Home() {
       const data = await response.json();
 
       setConversationId(data.conversation_id);
+      await refreshConversations();
 
       setMessages((current) => [
         ...current,
