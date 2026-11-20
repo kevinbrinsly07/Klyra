@@ -102,10 +102,12 @@ class ConversationService:
                 (timestamp, conversation_id),
             )
 
+
     def get_history(
         self,
         conversation_id: str,
         limit: int = 20,
+        offset: int = 0,
     ) -> list[dict]:
         with self._get_connection() as conn:
             rows = conn.execute(
@@ -114,9 +116,9 @@ class ConversationService:
                 FROM messages
                 WHERE conversation_id = ?
                 ORDER BY id DESC
-                LIMIT ?
+                LIMIT ? OFFSET ?
                 """,
-                (conversation_id, limit),
+                (conversation_id, limit, offset),
             ).fetchall()
 
         rows.reverse()
