@@ -55,6 +55,44 @@ export default function Home() {
     loadConversations();
   }, []);
 
+  async function handleSelectConversation(id: string) {
+    if (loading) return;
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      const response = await fetch(
+        `${apiUrl}/api/v1/conversations/${id}/messages?limit=100&offset=0`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load conversation history");
+      }
+
+      const data = await response.json();
+
+      setConversationId(data.conversation_id);
+
+      setMessages(
+        data.messages.map(
+          (item: { role: "user" | "assistant"; content: string }) => ({
+            role: item.role,
+            content: item.content,
+          }),
+        ),
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load conversation.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSend() {
     const trimmed = message.trim();
 
@@ -161,14 +199,20 @@ export default function Home() {
           {conversations.length > 0 ? (
             <div className="space-y-1">
               {conversations.map((conversation) => (
-                <div
+                <button
                   key={conversation.id}
-                  className="truncate rounded-lg px-3 py-2 text-sm text-zinc-300"
+                  onClick={() => handleSelectConversation(conversation.id)}
+                  disabled={loading}
+                  className={`w-full truncate rounded-lg px-3 py-2 text-left text-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed ${
+                    conversationId === conversation.id
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-300"
+                  }`}
                 >
                   {conversation.title ||
                     conversation.last_message ||
                     "New conversation"}
-                </div>
+                </button>
               ))}
             </div>
           ) : (
