@@ -15,6 +15,7 @@ from app.schemas.chat import (
     ConversationHistoryResponse,
     ConversationListResponse,
     ConversationSummary,
+    RenameConversationRequest,
 )
 from app.services.rag_service import rag_service
 from app.services.conversation_service import ConversationService
@@ -101,6 +102,39 @@ def list_conversations(
         limit=limit,
         offset=offset,
     )
+
+
+@app.patch(
+    "/api/v1/conversations/{conversation_id}",
+)
+def rename_conversation(
+    conversation_id: str,
+    request: RenameConversationRequest,
+):
+    title = request.title.strip()
+
+    if not title:
+        raise HTTPException(
+            status_code=400,
+            detail="Conversation title cannot be empty.",
+        )
+
+    renamed = conversation_service.rename_conversation(
+        conversation_id=conversation_id,
+        title=title,
+    )
+
+    if not renamed:
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found.",
+        )
+
+    return {
+        "message": "Conversation renamed successfully.",
+        "conversation_id": conversation_id,
+        "title": title,
+    }
 
 
 @app.post(

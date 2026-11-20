@@ -54,3 +54,11 @@ class ConversationListResponse(BaseModel):
     conversations: list[ConversationSummary] = Field(default_factory=list)
     limit: int
     offset: int
+
+
+class RenameConversationRequest(BaseModel):
+    title: str = Field(
+        min_length=1,
+        max_length=100,
+        description="New conversation title",
+    )
