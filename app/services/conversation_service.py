@@ -194,3 +194,15 @@ class ConversationService:
             )
 
         return cursor.rowcount > 0
+
+    def delete_conversation(self, conversation_id: str) -> bool:
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                """
+                DELETE FROM conversations
+                WHERE id = ?
+                """,
+                (conversation_id,),
+            )
+
+        return cursor.rowcount > 0
