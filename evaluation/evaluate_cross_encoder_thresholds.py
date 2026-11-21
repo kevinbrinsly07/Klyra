@@ -13,7 +13,7 @@ import chromadb
 from chromadb.api.types import Embeddings
 from sentence_transformers import CrossEncoder
 
-from evaluation.multi_document_dataset import (
+from evaluation.cross_encoder_robustness_dataset import (
     EVALUATION_DOCUMENTS,
     MULTI_DOCUMENT_EVALUATION_DATASET,
 )
@@ -26,7 +26,17 @@ from app.vectorstore.chroma_service import chroma_service
 TOP_K = 3
 MIN_SIMILARITY = 0.10
 
-THRESHOLDS = [0.0, 2.0, 3.0, 4.0, 4.5, 5.0, 6.0]
+THRESHOLDS = [
+    0.0,
+    2.0,
+    3.0,
+    3.5,
+    4.0,
+    4.5,
+    5.0,
+    5.5,
+    6.0,
+]
 
 CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
