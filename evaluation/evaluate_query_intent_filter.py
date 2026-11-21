@@ -276,9 +276,6 @@ def run_experiment(scored_cases, mode):
             if missing:
                 print(f"WARNING: Relevant chunks filtered out: " f"{sorted(missing)}")
 
-        else:
-            raise ValueError(f"Unknown experiment mode: {mode}")
-
         selected_ids = [item["chunk_id"] for item in selected]
 
         metrics = evaluate_results(case, selected_ids)
