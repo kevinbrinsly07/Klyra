@@ -330,7 +330,56 @@ def run_threshold(threshold, scored_cases):
 
 
 def evaluate():
-   diagnose_answerable_cases(scored_cases)
+    print("\nKLYRA CROSS-ENCODER ROBUSTNESS DIAGNOSTIC")
+    print("=========================================")
+
+    print(f"\nLoading model: {CROSS_ENCODER_MODEL}")
+    cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL)
+
+    temporary_client = chromadb.EphemeralClient()
+
+    temporary_collection = temporary_client.create_collection(
+        name=f"klyra_diagnostic_{uuid.uuid4().hex[:12]}",
+        metadata={"hnsw:space": "cosine"},
+    )
+
+    original_collection = chroma_service.collection
+
+    try:
+        ids, documents, metadatas = build_synthetic_corpus()
+
+        print(f"Synthetic documents: {len(EVALUATION_DOCUMENTS)}")
+        print(f"Synthetic chunks: {len(documents)}")
+        print("Generating embeddings...")
+
+        embeddings = cast(
+            Embeddings,
+            embedding_service.generate_embeddings(documents),
+        )
+
+        temporary_collection.upsert(
+            ids=ids,
+            documents=documents,
+            metadatas=metadatas,
+            embeddings=embeddings,
+        )
+
+        chroma_service.collection = temporary_collection
+        keyword_search_service.invalidate_cache()
+
+        print("Temporary corpus indexed successfully.")
+        print("\nRetrieving and scoring candidates...")
+
+        scored_cases = retrieve_and_score_cases(cross_encoder)
+
+        diagnose_answerable_cases(scored_cases)
+
+    finally:
+        chroma_service.collection = original_collection
+        keyword_search_service.invalidate_cache()
+
+        print("\nProduction ChromaDB collection restored.")
+        print("Temporary evaluation collection was isolated.")
 
 
 if __name__ == "__main__":
