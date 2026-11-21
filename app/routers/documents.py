@@ -12,6 +12,7 @@ from app.schemas.document import (
 )
 from app.vectorstore.chroma_service import chroma_service
 from app.services.keyword_search_service import keyword_search_service
+from app.services.hybrid_search_service import hybrid_search_service
 
 router = APIRouter(
     prefix="/api/v1/documents",
@@ -125,18 +126,19 @@ def list_documents(
 @router.get("/search")
 def search_documents(
     q: str = Query(..., min_length=1, max_length=500),
-    top_k: int = Query(default=10, ge=1, le=20),
+    top_k: int = Query(default=10, ge=1, le=10),
 ):
     try:
-        results = keyword_search_service.search(
+        results = hybrid_search_service.search(
             query=q,
             top_k=top_k,
+            min_similarity=0.10,
         )
 
         ids = results["ids"][0]
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]
-        scores = results["scores"][0]
+        scores = results["hybrid_scores"][0]
 
         return {
             "query": q,
