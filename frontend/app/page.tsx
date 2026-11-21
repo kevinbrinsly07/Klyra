@@ -410,20 +410,88 @@ export default function Home() {
           {conversations.length > 0 ? (
             <div className="space-y-1">
               {conversations.map((conversation) => (
-                <button
+                <div
                   key={conversation.id}
-                  onClick={() => handleSelectConversation(conversation.id)}
-                  disabled={loading}
-                  className={`w-full truncate rounded-lg px-3 py-2 text-left text-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed ${
-                    conversationId === conversation.id
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-300"
-                  }`}
+                  className="group flex items-center gap-1"
                 >
-                  {conversation.title ||
-                    conversation.last_message ||
-                    "New conversation"}
-                </button>
+                  {editingConversationId === conversation.id ? (
+                    <div className="flex min-w-0 flex-1 items-center gap-1">
+                      <input
+                        autoFocus
+                        value={editingConversationTitle}
+                        onChange={(event) =>
+                          setEditingConversationTitle(event.target.value)
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handleRenameConversation(conversation.id);
+                          }
+                          if (event.key === "Escape") {
+                            setEditingConversationId(null);
+                            setEditingConversationTitle("");
+                          }
+                        }}
+                        className="min-w-0 flex-1 rounded-lg border border-zinc-600 bg-zinc-800 px-2 py-2 text-sm text-white outline-none focus:border-zinc-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRenameConversation(conversation.id)
+                        }
+                        className="rounded p-1 text-xs text-green-400 hover:bg-zinc-700"
+                        title="Save title"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingConversationId(null);
+                          setEditingConversationTitle("");
+                        }}
+                        className="rounded p-1 text-xs text-zinc-400 hover:bg-zinc-700"
+                        title="Cancel"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSelectConversation(conversation.id)
+                        }
+                        disabled={loading}
+                        className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed ${
+                          conversationId === conversation.id
+                            ? "bg-zinc-800 text-white"
+                            : "text-zinc-300"
+                        }`}
+                      >
+                        {conversation.title ||
+                          conversation.last_message ||
+                          "New conversation"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingConversationId(conversation.id);
+                          setEditingConversationTitle(
+                            conversation.title ||
+                              conversation.last_message ||
+                              "New conversation",
+                          );
+                        }}
+                        className="rounded p-2 text-xs text-zinc-500 opacity-0 transition hover:bg-zinc-800 hover:text-white group-hover:opacity-100"
+                        title="Rename conversation"
+                      >
+                        ✎
+                      </button>
+                    </>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
