@@ -105,11 +105,11 @@ export default function Home() {
         throw new Error(data.detail || "Document deletion failed.");
       }
 
-      setUploadSuccess("Document deleted successfully.");
+      toast.success("Document deleted successfully.");
 
       await refreshDocuments();
     } catch (err) {
-      setUploadError(
+      toast.error(
         err instanceof Error ? err.message : "Document deletion failed.",
       );
     }
