@@ -385,7 +385,7 @@ MULTI_DOCUMENT_EVALUATION_DATASET = [
         "question": "What is the process for building and maintaining software?",
         "should_find_answer": True,
         "relevant_chunk_ids": ["software_development_0"],
-        "supporting_chunk_ids": [],
+        "supporting_chunk_ids": ["information_technology_1"],
     },
     {
         "question": "How can a company protect its data from unauthorized access?",
