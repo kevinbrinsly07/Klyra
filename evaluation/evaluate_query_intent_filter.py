@@ -1,4 +1,3 @@
-
 """Compare baseline hybrid retrieval, cross-encoder reranking,
 and cross-encoder reranking with a lightweight intent filter.
 
@@ -23,7 +22,6 @@ from app.services.keyword_search_service import keyword_search_service
 from app.services.hybrid_search_service import hybrid_search_service
 from app.vectorstore.chroma_service import chroma_service
 
-
 TOP_K = 3
 MIN_SIMILARITY = 0.10
 CROSS_ENCODER_THRESHOLD = 4.0
@@ -35,20 +33,46 @@ ATTRIBUTE_GROUPS = {
     "age": {"age", "minimum", "old", "young"},
     "cost": {"cost", "costs", "price", "prices", "fee", "fees", "tuition"},
     "requirements": {
-        "requirement", "requirements", "need", "needs", "required",
-        "eligibility", "eligible",
+        "requirement",
+        "requirements",
+        "need",
+        "needs",
+        "required",
+        "eligibility",
+        "eligible",
     },
     "authority": {
-        "authority", "department", "government", "body", "responsible",
-        "issue", "issues", "issuing", "grant", "grants",
+        "authority",
+        "department",
+        "government",
+        "body",
+        "responsible",
+        "issue",
+        "issues",
+        "issuing",
+        "grant",
+        "grants",
     },
     "process": {
-        "process", "procedure", "procedures", "complete", "completion",
-        "automatically", "obtain", "obtaining", "register", "registration",
+        "process",
+        "procedure",
+        "procedures",
+        "complete",
+        "completion",
+        "automatically",
+        "obtain",
+        "obtaining",
+        "register",
+        "registration",
     },
     "comparison": {
-        "same", "different", "difference", "compare", "comparison",
-        "between", "versus",
+        "same",
+        "different",
+        "difference",
+        "compare",
+        "comparison",
+        "between",
+        "versus",
     },
 }
 
@@ -104,11 +128,13 @@ def build_synthetic_corpus():
         for index, chunk in enumerate(source["chunks"]):
             ids.append(chunk["chunk_id"])
             documents.append(chunk["content"])
-            metadatas.append({
-                "document_id": source["document_id"],
-                "filename": source["filename"],
-                "chunk_index": index,
-            })
+            metadatas.append(
+                {
+                    "document_id": source["document_id"],
+                    "filename": source["filename"],
+                    "chunk_index": index,
+                }
+            )
 
     return ids, documents, metadatas
 
@@ -134,39 +160,34 @@ def retrieve_and_score_cases(cross_encoder):
         candidate_ids = (candidates.get("ids") or [[]])[0]
         candidate_documents = (candidates.get("documents") or [[]])[0]
 
-        pairs = [
-            (question, document)
-            for document in candidate_documents
-        ]
+        pairs = [(question, document) for document in candidate_documents]
 
-        scores = (
-            cross_encoder.predict(pairs)
-            if pairs else []
-        )
+        scores = cross_encoder.predict(pairs) if pairs else []
 
         scored_candidates = []
 
         for candidate_index, document in enumerate(candidate_documents):
-            scored_candidates.append({
-                "chunk_id": candidate_ids[candidate_index],
-                "document": document,
-                "score": float(scores[candidate_index]),
-            })
+            scored_candidates.append(
+                {
+                    "chunk_id": candidate_ids[candidate_index],
+                    "document": document,
+                    "score": float(scores[candidate_index]),
+                }
+            )
 
         scored_candidates.sort(
             key=lambda item: item["score"],
             reverse=True,
         )
 
-        scored_cases.append({
-            "case": case,
-            "candidates": scored_candidates,
-        })
-
-        print(
-            f"Scored question {index}/"
-            f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}"
+        scored_cases.append(
+            {
+                "case": case,
+                "candidates": scored_candidates,
+            }
         )
+
+        print(f"Scored question {index}/" f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
 
     return scored_cases
 
@@ -176,11 +197,7 @@ def evaluate_results(case, chunk_ids):
     supporting = set(case["supporting_chunk_ids"])
     useful = direct | supporting
 
-    false_positives = [
-        chunk_id
-        for chunk_id in chunk_ids
-        if chunk_id not in useful
-    ]
+    false_positives = [chunk_id for chunk_id in chunk_ids if chunk_id not in useful]
 
     if not case["should_find_answer"]:
         return {
@@ -193,29 +210,16 @@ def evaluate_results(case, chunk_ids):
             "negative_correct": len(chunk_ids) == 0,
         }
 
-    useful_count = sum(
-        chunk_id in useful
-        for chunk_id in chunk_ids
-    )
+    useful_count = sum(chunk_id in useful for chunk_id in chunk_ids)
 
-    direct_found = [
-        chunk_id
-        for chunk_id in chunk_ids
-        if chunk_id in direct
-    ]
+    direct_found = [chunk_id for chunk_id in chunk_ids if chunk_id in direct]
 
     return {
         "retrieved": len(chunk_ids),
         "useful": useful_count,
         "false_positives": len(false_positives),
-        "precision": (
-            useful_count / len(chunk_ids)
-            if chunk_ids else 0.0
-        ),
-        "recall": (
-            len(set(direct_found)) / len(direct)
-            if direct else 0.0
-        ),
+        "precision": (useful_count / len(chunk_ids) if chunk_ids else 0.0),
+        "recall": (len(set(direct_found)) / len(direct) if direct else 0.0),
         "mrr": next(
             (
                 1 / rank
@@ -245,9 +249,7 @@ def run_experiment(scored_cases, mode):
 
         elif mode == "cross_encoder":
             selected = [
-                item
-                for item in candidates
-                if item["score"] >= CROSS_ENCODER_THRESHOLD
+                item for item in candidates if item["score"] >= CROSS_ENCODER_THRESHOLD
             ][:TOP_K]
 
         elif mode == "intent_filter":
@@ -263,22 +265,21 @@ def run_experiment(scored_cases, mode):
                 )
             ][:TOP_K]
 
+        else:
+            raise ValueError(f"Unknown experiment mode: {mode}")
+
         if mode == "intent_filter" and case["should_find_answer"]:
             expected_ids = set(case["relevant_chunk_ids"])
             selected_ids = {item["chunk_id"] for item in selected}
-
             missing = expected_ids - selected_ids
 
             if missing:
-                print(f"WARNING: Relevant chunks filtered out: {sorted(missing)}")
+                print(f"WARNING: Relevant chunks filtered out: " f"{sorted(missing)}")
 
         else:
             raise ValueError(f"Unknown experiment mode: {mode}")
 
-        selected_ids = [
-            item["chunk_id"]
-            for item in selected
-        ]
+        selected_ids = [item["chunk_id"] for item in selected]
 
         metrics = evaluate_results(case, selected_ids)
 
@@ -307,57 +308,38 @@ def run_experiment(scored_cases, mode):
             positive_results.append(metrics)
         else:
             negative_results.append(metrics)
-            print(
-                f"Correctly rejected: "
-                f"{metrics['negative_correct']}"
-            )
+            print(f"Correctly rejected: " f"{metrics['negative_correct']}")
 
     positive_count = len(positive_results)
     negative_count = len(negative_results)
 
-    total_useful = sum(
-        item["useful"] for item in positive_results
-    )
-    total_retrieved = sum(
-        item["retrieved"] for item in positive_results
-    )
+    total_useful = sum(item["useful"] for item in positive_results)
+    total_retrieved = sum(item["retrieved"] for item in positive_results)
 
     summary = {
         "macro_precision": (
-            sum(item["precision"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["precision"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "micro_precision": (
-            total_useful / total_retrieved
-            if total_retrieved else 0.0
-        ),
+        "micro_precision": (total_useful / total_retrieved if total_retrieved else 0.0),
         "recall": (
-            sum(item["recall"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["recall"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
         "mrr": (
-            sum(item["mrr"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["mrr"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "positive_fp": sum(
-            item["false_positives"]
-            for item in positive_results
-        ),
-        "negative_fp": sum(
-            item["false_positives"]
-            for item in negative_results
-        ),
+        "positive_fp": sum(item["false_positives"] for item in positive_results),
+        "negative_fp": sum(item["false_positives"] for item in negative_results),
         "total_fp": (
             sum(item["false_positives"] for item in positive_results)
             + sum(item["false_positives"] for item in negative_results)
         ),
-        "negative_correct": sum(
-            item["negative_correct"]
-            for item in negative_results
-        ),
+        "negative_correct": sum(item["negative_correct"] for item in negative_results),
         "negative_total": negative_count,
     }
 
