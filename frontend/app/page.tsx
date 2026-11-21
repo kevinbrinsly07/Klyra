@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../lib/api";
 
 type ChatSource = {
   filename: string;
@@ -50,7 +51,7 @@ export default function Home() {
     setUploadSuccess("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = API_BASE_URL;
 
       const formData = new FormData();
       formData.append("file", file);
@@ -91,7 +92,7 @@ export default function Home() {
     setUploadSuccess("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = API_BASE_URL;
 
       const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
         method: "DELETE",
@@ -116,8 +117,7 @@ export default function Home() {
   useEffect(() => {
     async function loadDocuments() {
       try {
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const apiUrl = API_BASE_URL;
 
         const response = await fetch(
           `${apiUrl}/api/v1/documents/?limit=100&offset=0`,
@@ -141,7 +141,7 @@ export default function Home() {
     setDocumentsLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = API_BASE_URL;
 
       const response = await fetch(
         `${apiUrl}/api/v1/documents/?limit=100&offset=0`,
@@ -162,7 +162,7 @@ export default function Home() {
 
   async function refreshConversations() {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = API_BASE_URL;
 
       const response = await fetch(
         `${apiUrl}/api/v1/conversations?limit=20&offset=0`,
@@ -182,8 +182,7 @@ export default function Home() {
   useEffect(() => {
     async function loadConversations() {
       try {
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const apiUrl = API_BASE_URL;
 
         const response = await fetch(
           `${apiUrl}/api/v1/conversations?limit=20&offset=0`,
@@ -210,7 +209,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = API_BASE_URL;
 
       const response = await fetch(
         `${apiUrl}/api/v1/conversations/${id}/messages?limit=100&offset=0`,
@@ -254,7 +253,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = API_BASE_URL;
 
       const response = await fetch(`${apiUrl}/api/v1/chat`, {
         method: "POST",
