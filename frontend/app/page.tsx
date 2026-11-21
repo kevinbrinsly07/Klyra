@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../lib/api";
+import { toast } from "sonner";
 
 type ChatSource = {
   filename: string;
@@ -67,13 +68,13 @@ export default function Home() {
         throw new Error(data.detail || "Document upload failed.");
       }
 
-      setUploadSuccess(
+      toast.success(
         `${data.filename} uploaded successfully. ${data.total_chunks} chunks indexed.`,
       );
 
       await refreshDocuments();
     } catch (err) {
-      setUploadError(
+      toast.error(
         err instanceof Error ? err.message : "Document upload failed.",
       );
     } finally {
