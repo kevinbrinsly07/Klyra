@@ -260,6 +260,88 @@ def evaluate_results(case, chunk_ids):
         "negative_correct": None,
     }
 
+def run_rank_only(scored_cases):
+    """Evaluate the top three candidates without score filtering."""
+
+    positive_results = []
+    negative_results = []
+
+    print(f"\n{'=' * 65}")
+    print("CROSS-ENCODER RANK-ONLY EVALUATION")
+    print("=" * 65)
+
+    for index, entry in enumerate(scored_cases, start=1):
+        case = entry["case"]
+        scored_candidates = entry["scored_candidates"]
+
+        selected_ids = [
+            item["chunk_id"]
+            for item in scored_candidates[:TOP_K]
+        ]
+
+        metrics = evaluate_results(case, selected_ids)
+
+        print(f"\nTest {index}/{len(scored_cases)}")
+        print(f"Question: {case['question']}")
+        print(f"Selected chunks: {selected_ids}")
+
+        if case["should_find_answer"]:
+            positive_results.append(metrics)
+        else:
+            negative_results.append(metrics)
+
+    positive_count = len(positive_results)
+    negative_count = len(negative_results)
+
+    total_useful = sum(item["useful"] for item in positive_results)
+    total_retrieved = sum(item["retrieved"] for item in positive_results)
+
+    summary = {
+        "macro_precision": (
+            sum(item["precision"] for item in positive_results)
+            / positive_count if positive_count else 0.0
+        ),
+        "micro_precision": (
+            total_useful / total_retrieved if total_retrieved else 0.0
+        ),
+        "recall": (
+            sum(item["recall"] for item in positive_results)
+            / positive_count if positive_count else 0.0
+        ),
+        "mrr": (
+            sum(item["mrr"] for item in positive_results)
+            / positive_count if positive_count else 0.0
+        ),
+        "positive_fp": sum(
+            item["false_positives"] for item in positive_results
+        ),
+        "negative_fp": sum(
+            item["false_positives"] for item in negative_results
+        ),
+        "total_fp": (
+            sum(item["false_positives"] for item in positive_results)
+            + sum(item["false_positives"] for item in negative_results)
+        ),
+        "negative_correct": sum(
+            item["negative_correct"] for item in negative_results
+        ),
+        "negative_total": negative_count,
+    }
+
+    print("\nRANK-ONLY SUMMARY")
+    print(f"Macro precision: {summary['macro_precision']:.2%}")
+    print(f"Micro precision: {summary['micro_precision']:.2%}")
+    print(f"Mean direct recall: {summary['recall']:.2%}")
+    print(f"Mean MRR: {summary['mrr']:.2%}")
+    print(f"Positive false positives: {summary['positive_fp']}")
+    print(f"Negative false positives: {summary['negative_fp']}")
+    print(f"Total false positives: {summary['total_fp']}")
+    print(
+        f"Negative queries rejected: "
+        f"{summary['negative_correct']}/{negative_count}"
+    )
+
+    return summary
 
 def run_threshold(threshold, scored_cases):
     positive_results = []
@@ -431,6 +513,7 @@ def evaluate():
         scored_cases = retrieve_and_score_cases(cross_encoder)
         diagnose_answerable_cases(scored_cases)
 
+        rank_only_results = run_rank_only(scored_cases)
         results = {}
 
         for threshold in THRESHOLDS:
@@ -439,6 +522,40 @@ def evaluate():
                 scored_cases,
             )
 
+        print("\n\nRANK-ONLY VS THRESHOLD COMPARISON")
+        print("=" * 115)
+
+        print(
+            f"{'Method':<15}"
+            f"{'Macro P':>11}"
+            f"{'Micro P':>11}"
+            f"{'Recall':>11}"
+            f"{'MRR':>11}"
+            f"{'Positive FP':>13}"
+            f"{'Negative FP':>13}"
+            f"{'Total FP':>11}"
+            f"{'Rejected':>12}"
+        )
+
+        comparison_results = [
+            ("Rank-only", rank_only_results),
+            ("Threshold 3.0", results[3.0]),
+            ("Threshold 3.5", results[3.5]),
+        ]
+
+        for method, metrics in comparison_results:
+            print(
+                f"{method:<15}"
+                f"{metrics['macro_precision']:>10.2%}"
+                f"{metrics['micro_precision']:>11.2%}"
+                f"{metrics['recall']:>11.2%}"
+                f"{metrics['mrr']:>11.2%}"
+                f"{metrics['positive_fp']:>13}"
+                f"{metrics['negative_fp']:>13}"
+                f"{metrics['total_fp']:>11}"
+                f"{metrics['negative_correct']}/"
+                f"{metrics['negative_total']:>9}"
+            )
         print("\n\nFINAL THRESHOLD COMPARISON")
         print("=" * 115)
 
