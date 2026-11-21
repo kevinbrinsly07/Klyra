@@ -104,7 +104,14 @@ class KeywordSearchService:
             if not document or not document.strip():
                 continue
 
-            tokens = self.tokenize(document)
+            metadata = (
+                metadatas[index] if index < len(metadatas) and metadatas[index] else {}
+            )
+
+            filename = metadata.get("filename", "")
+
+            searchable_text = f"{filename} {document}"
+            tokens = self.tokenize(searchable_text)
 
             if not tokens:
                 continue
@@ -112,11 +119,6 @@ class KeywordSearchService:
             corpus.append(tokens)
             valid_ids.append(ids[index])
             valid_documents.append(document)
-
-            metadata = (
-                metadatas[index] if index < len(metadatas) and metadatas[index] else {}
-            )
-
             valid_metadatas.append(metadata)
 
         bm25 = BM25Plus(corpus) if corpus else None
@@ -171,9 +173,7 @@ class KeywordSearchService:
             return self._empty_results()
 
         filtered_query_tokens = [
-            token
-            for token in query_tokens
-            if token not in self.STOP_WORDS
+            token for token in query_tokens if token not in self.STOP_WORDS
         ]
 
         scores = bm25.get_scores(filtered_query_tokens)
