@@ -119,7 +119,7 @@ def diagnose_answerable_cases(scored_cases):
 
     retrieval_misses = 0
     reranking_misses = 0
-    threshold_misses = {threshold: 0 for threshold in thresholds}
+    threshold_misses = {threshold: [] for threshold in thresholds}
 
     answerable_cases = [
         entry for entry in scored_cases if entry["case"]["should_find_answer"]
@@ -177,7 +177,13 @@ def diagnose_answerable_cases(scored_cases):
             if direct_ids.intersection(top_k_ids) and not direct_ids.intersection(
                 selected_ids
             ):
-                threshold_misses[threshold] += 1
+                threshold_misses[threshold].append({
+                    "question": case["question"],
+                    "relevant_chunks": [
+                        item for item in candidates
+                        if item["chunk_id"] in direct_ids
+                    ],
+                })
 
     print("\nDIAGNOSTIC SUMMARY")
     print("=" * 80)
@@ -185,8 +191,17 @@ def diagnose_answerable_cases(scored_cases):
     print(f"Retrieval failures: {retrieval_misses}")
     print(f"Reranking failures: {reranking_misses}")
 
-    for threshold, count in threshold_misses.items():
-        print(f"Threshold {threshold:.1f} misses: {count}")
+    for threshold, misses in threshold_misses.items():
+        print(f"\nThreshold {threshold:.1f} misses: {len(misses)}")
+
+        for miss in misses:
+            print(f"  Question: {miss['question']}")
+
+            for item in miss["relevant_chunks"]:
+                print(
+                    f"    Chunk: {item['chunk_id']} "
+                    f"| Score: {item['score']:.4f}"
+                )
 
 
 def evaluate_results(case, chunk_ids):
