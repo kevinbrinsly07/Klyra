@@ -38,6 +38,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [editingConversationId, setEditingConversationId] = useState<
+    string | null
+  >(null);
+  const [editingConversationTitle, setEditingConversationTitle] = useState("");
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [view, setView] = useState<"chat" | "documents">("chat");
@@ -244,6 +248,47 @@ export default function Home() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRenameConversation(id: string) {
+    const title = editingConversationTitle.trim();
+
+    if (!title) {
+      toast.error("Conversation title cannot be empty.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/conversations/${id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ title }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.detail || "Failed to rename conversation.");
+      }
+
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === id ? { ...conversation, title } : conversation,
+        ),
+      );
+
+      setEditingConversationId(null);
+      setEditingConversationTitle("");
+      toast.success("Conversation renamed successfully.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to rename conversation.",
+      );
     }
   }
 
