@@ -70,3 +70,81 @@ if __name__ == "__main__":
     test_empty_results()
 
     print("Context processing tests passed!")
+
+def test_context_respects_max_chunks():
+    results = {
+        "ids": [["chunk_1", "chunk_2", "chunk_3", "chunk_4"]],
+        "documents": [[
+            "Python is used for backend development.",
+            "React is used for frontend development.",
+            "PostgreSQL is a relational database.",
+            "Docker is used for containerization."
+        ]],
+        "metadatas": [[{}, {}, {}, {}]],
+        "distances": [[0.1, 0.2, 0.3, 0.4]],
+        "hybrid_scores": [[0.04, 0.03, 0.02, 0.01]]
+    }
+
+    processed = context_service.process(
+        query="Python backend development",
+        results=results,
+        max_chunks=2
+    )
+
+    assert len(processed["documents"][0]) == 2
+
+
+def test_context_removes_empty_chunks():
+    results = {
+        "ids": [["chunk_1", "chunk_2", "chunk_3"]],
+        "documents": [[
+            "Python is used for backend development.",
+            "",
+            "React is used for frontend development."
+        ]],
+        "metadatas": [[{}, {}, {}]],
+        "distances": [[0.1, 0.2, 0.3]],
+        "hybrid_scores": [[0.04, 0.03, 0.02]]
+    }
+
+    processed = context_service.process(
+        query="Python React development",
+        results=results
+    )
+
+    assert len(processed["documents"][0]) == 2
+    assert all(document.strip() for document in processed["documents"][0])
+
+
+def test_context_handles_missing_optional_fields():
+    results = {
+        "documents": [[
+            "Python is used for backend development."
+        ]]
+    }
+
+    processed = context_service.process(
+        query="Python backend development",
+        results=results
+    )
+
+    assert processed["ids"] == [["0"]]
+    assert processed["metadatas"] == [[{}]]
+    assert processed["distances"] == [[None]]
+    assert len(processed["rerank_scores"][0]) == 1
+
+
+def test_context_rejects_invalid_queries_and_limits():
+    import pytest
+
+    with pytest.raises(ValueError, match="Query cannot be empty"):
+        context_service.process("", {"documents": [[]]})
+
+    with pytest.raises(ValueError, match="Query cannot be empty"):
+        context_service.process("   ", {"documents": [[]]})
+
+    with pytest.raises(ValueError, match="max_chunks must be between 1 and 10"):
+        context_service.process("Python", {"documents": [[]]}, max_chunks=0)
+
+    with pytest.raises(ValueError, match="max_chunks must be between 1 and 10"):
+        context_service.process("Python", {"documents": [[]]}, max_chunks=11)
