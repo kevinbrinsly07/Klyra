@@ -18,7 +18,7 @@ from app.vectorstore.chroma_service import chroma_service
 
 
 TOP_K = 3
-MIN_SIMILARITY = 0.50
+MIN_SIMILARITY = 0.10
 
 
 def build_synthetic_corpus():
