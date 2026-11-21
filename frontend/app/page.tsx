@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { API_BASE_URL } from "../lib/api";
 import { toast } from "sonner";
 
@@ -704,9 +706,11 @@ export default function Home() {
                           </span>
                         </div>
 
-                        <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-600">
-                          {result.content}
-                        </p>
+                        <div className="prose prose-sm max-w-none text-zinc-600 prose-headings:font-semibold prose-headings:text-zinc-800 prose-a:text-blue-600 prose-a:underline prose-strong:text-zinc-800 prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-zinc-800 prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:bg-zinc-900 prose-pre:p-4 prose-pre:text-zinc-100 prose-ul:my-2 prose-ol:my-2">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
+                            {result.content}
+                          </ReactMarkdown>
+                        </div>
                       </article>
                     ))}
                   </div>
