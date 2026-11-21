@@ -26,7 +26,7 @@ from app.services.hybrid_search_service import hybrid_search_service
 from app.vectorstore.chroma_service import chroma_service
 
 TOP_K = 3
-MIN_SIMILARITY = 0.50
+MIN_SIMILARITY = 0.10
 CROSS_ENCODER_THRESHOLD = 4.0
 ENTAILMENT_THRESHOLD = 0.70
 

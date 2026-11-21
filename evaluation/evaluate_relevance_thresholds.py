@@ -17,7 +17,7 @@ from app.services.keyword_search_service import keyword_search_service
 from app.vectorstore.chroma_service import chroma_service
 
 TOP_K = 3
-MIN_SIMILARITY = 0.50
+MIN_SIMILARITY = 0.10
 
 THRESHOLDS = [0.0, 0.20, 0.30, 0.40, 0.50]
 

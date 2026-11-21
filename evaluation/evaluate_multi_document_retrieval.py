@@ -15,7 +15,7 @@ from app.services.context_service import context_service
 from app.vectorstore.chroma_service import chroma_service
 
 
-MIN_SIMILARITY = 0.50
+MIN_SIMILARITY = 0.10
 TOP_K = 3
 
 

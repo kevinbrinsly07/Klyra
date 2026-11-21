@@ -18,7 +18,7 @@ from app.vectorstore.chroma_service import chroma_service
 
 TOP_K = 3
 CANDIDATE_K = 10
-MIN_SIMILARITY = 0.50
+MIN_SIMILARITY = 0.10
 
 CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 

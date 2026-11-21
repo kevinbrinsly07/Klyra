@@ -24,7 +24,7 @@ from app.vectorstore.chroma_service import chroma_service
 
 
 TOP_K = 3
-MIN_SIMILARITY = 0.50
+MIN_SIMILARITY = 0.10
 
 THRESHOLDS = [0.0, 2.0, 3.0, 4.0, 4.5, 5.0, 6.0]
 
