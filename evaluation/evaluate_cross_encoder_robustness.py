@@ -116,6 +116,93 @@ def retrieve_and_score_cases(cross_encoder):
     return scored_cases
 
 
+def diagnose_answerable_cases(scored_cases):
+    """Identify retrieval, reranking, and threshold-related misses."""
+
+    thresholds = [0.0, 3.0, 3.5]
+
+    retrieval_misses = 0
+    reranking_misses = 0
+    threshold_misses = {threshold: 0 for threshold in thresholds}
+
+    answerable_cases = [
+        entry for entry in scored_cases
+        if entry["case"]["should_find_answer"]
+    ]
+
+    print("\nCROSS-ENCODER ROBUSTNESS DIAGNOSTIC")
+    print("=" * 80)
+
+    for index, entry in enumerate(answerable_cases, start=1):
+        case = entry["case"]
+        candidates = entry["scored_candidates"]
+
+        direct_ids = set(case["relevant_chunk_ids"])
+        candidate_ids = {
+            item["chunk_id"] for item in candidates
+        }
+
+        found_direct = direct_ids.intersection(candidate_ids)
+
+        top_k_candidates = candidates[:TOP_K]
+        top_k_ids = {
+            item["chunk_id"] for item in top_k_candidates
+        }
+
+        if not found_direct:
+            retrieval_misses += 1
+            status = "RETRIEVAL FAILURE"
+
+        elif not direct_ids.intersection(top_k_ids):
+            reranking_misses += 1
+            status = "RERANKING FAILURE"
+
+        else:
+            status = "RELEVANT CHUNK IN TOP 3"
+
+        print(f"\nQuestion {index}/{len(answerable_cases)}")
+        print(f"Question: {case['question']}")
+        print(f"Status: {status}")
+
+        if found_direct:
+            for item in candidates:
+                if item["chunk_id"] in direct_ids:
+                    rank = candidates.index(item) + 1
+                    print(
+                        f"  Relevant chunk: {item['chunk_id']} "
+                        f"| Rank: {rank} "
+                        f"| Score: {item['score']:.4f}"
+                    )
+
+        else:
+            print("  No directly relevant chunk found in candidates.")
+
+        for threshold in thresholds:
+          selected_ids = {
+          item["chunk_id"]
+          for item in [
+               candidate for candidate in candidates
+               if candidate["score"] >= threshold
+          ][:TOP_K]
+          }
+
+          if (
+                direct_ids.intersection(top_k_ids)
+                and not direct_ids.intersection(selected_ids)
+            ):
+                threshold_misses[threshold] += 1
+
+    print("\nDIAGNOSTIC SUMMARY")
+    print("=" * 80)
+    print(f"Answerable questions: {len(answerable_cases)}")
+    print(f"Retrieval failures: {retrieval_misses}")
+    print(f"Reranking failures: {reranking_misses}")
+
+    for threshold, count in threshold_misses.items():
+        print(
+            f"Threshold {threshold:.1f} misses: {count}"
+        )
+
 def evaluate_results(case, chunk_ids):
     direct = set(case["relevant_chunk_ids"])
     supporting = set(case["supporting_chunk_ids"])
@@ -341,8 +428,8 @@ def evaluate():
 
         print("Temporary corpus indexed successfully.")
 
-        print("\nRetrieving and scoring candidates once...")
         scored_cases = retrieve_and_score_cases(cross_encoder)
+        diagnose_answerable_cases(scored_cases)
 
         results = {}
 
