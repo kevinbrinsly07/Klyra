@@ -16,6 +16,7 @@ from app.services.hybrid_search_service import hybrid_search_service
 from app.vectorstore.chroma_service import chroma_service
 
 TOP_K = 3
+MIN_SIMILARITY = 0.10
 
 
 def build_synthetic_corpus():
@@ -46,7 +47,7 @@ def evaluate_case(case, index):
     results = hybrid_search_service.search(
         query=question,
         top_k=TOP_K,
-        min_similarity=0.50,
+        min_similarity=MIN_SIMILARITY,
     )
 
     print("\nRetrieved chunk diagnostics:")
@@ -60,9 +61,7 @@ def evaluate_case(case, index):
         metadata = result_metadatas[rank - 1] or {}
 
         distance = (
-            result_distances[rank - 1]
-            if rank - 1 < len(result_distances)
-            else None
+            result_distances[rank - 1] if rank - 1 < len(result_distances) else None
         )
 
         score = result_scores[rank - 1] if rank - 1 < len(result_scores) else None
@@ -91,7 +90,7 @@ def evaluate_case(case, index):
     # Preserve ranking while counting each source document only once.
     unique_retrieved = list(dict.fromkeys(retrieved_documents))
 
-    print(f"\nTest {index}/7")
+    print(f"\nTest {index}/{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
     print(f"Question: {question}")
     print(f"Expected documents: {sorted(expected_ids)}")
     print(f"Retrieved chunks: {len(retrieved_ids)}")
