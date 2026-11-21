@@ -1,4 +1,3 @@
-
 """Evaluate cross-encoder thresholds on the synthetic corpus.
 
 Retrieval and cross-encoder scores are calculated once per question.
@@ -22,7 +21,6 @@ from app.services.keyword_search_service import keyword_search_service
 from app.services.hybrid_search_service import hybrid_search_service
 from app.vectorstore.chroma_service import chroma_service
 
-
 TOP_K = 3
 MIN_SIMILARITY = 0.10
 
@@ -31,6 +29,7 @@ THRESHOLDS = [
     -1.5,
     -1.0,
     -0.5,
+    -0.4,
     0.0,
     2.0,
     3.0,
@@ -49,11 +48,13 @@ def build_synthetic_corpus():
         for index, chunk in enumerate(source["chunks"]):
             ids.append(chunk["chunk_id"])
             documents.append(chunk["content"])
-            metadatas.append({
-                "document_id": source["document_id"],
-                "filename": source["filename"],
-                "chunk_index": index,
-            })
+            metadatas.append(
+                {
+                    "document_id": source["document_id"],
+                    "filename": source["filename"],
+                    "chunk_index": index,
+                }
+            )
 
     return ids, documents, metadatas
 
@@ -79,10 +80,7 @@ def retrieve_and_score_cases(cross_encoder):
         candidate_ids = (candidates.get("ids") or [[]])[0]
         candidate_documents = (candidates.get("documents") or [[]])[0]
 
-        pairs = [
-            (question, document)
-            for document in candidate_documents
-        ]
+        pairs = [(question, document) for document in candidate_documents]
 
         if pairs:
             scores = cross_encoder.predict(pairs)
@@ -102,15 +100,14 @@ def retrieve_and_score_cases(cross_encoder):
         else:
             scored_candidates = []
 
-        scored_cases.append({
-            "case": case,
-            "scored_candidates": scored_candidates,
-        })
-
-        print(
-            f"Scored question {index}/"
-            f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}"
+        scored_cases.append(
+            {
+                "case": case,
+                "scored_candidates": scored_candidates,
+            }
         )
+
+        print(f"Scored question {index}/" f"{len(MULTI_DOCUMENT_EVALUATION_DATASET)}")
 
     return scored_cases
 
@@ -125,8 +122,7 @@ def diagnose_answerable_cases(scored_cases):
     threshold_misses = {threshold: 0 for threshold in thresholds}
 
     answerable_cases = [
-        entry for entry in scored_cases
-        if entry["case"]["should_find_answer"]
+        entry for entry in scored_cases if entry["case"]["should_find_answer"]
     ]
 
     print("\nCROSS-ENCODER ROBUSTNESS DIAGNOSTIC")
@@ -137,16 +133,12 @@ def diagnose_answerable_cases(scored_cases):
         candidates = entry["scored_candidates"]
 
         direct_ids = set(case["relevant_chunk_ids"])
-        candidate_ids = {
-            item["chunk_id"] for item in candidates
-        }
+        candidate_ids = {item["chunk_id"] for item in candidates}
 
         found_direct = direct_ids.intersection(candidate_ids)
 
         top_k_candidates = candidates[:TOP_K]
-        top_k_ids = {
-            item["chunk_id"] for item in top_k_candidates
-        }
+        top_k_ids = {item["chunk_id"] for item in top_k_candidates}
 
         if not found_direct:
             retrieval_misses += 1
@@ -177,17 +169,17 @@ def diagnose_answerable_cases(scored_cases):
             print("  No directly relevant chunk found in candidates.")
 
         for threshold in thresholds:
-          selected_ids = {
-          item["chunk_id"]
-          for item in [
-               candidate for candidate in candidates
-               if candidate["score"] >= threshold
-          ][:TOP_K]
-          }
+            selected_ids = {
+                item["chunk_id"]
+                for item in [
+                    candidate
+                    for candidate in candidates
+                    if candidate["score"] >= threshold
+                ][:TOP_K]
+            }
 
-          if (
-                direct_ids.intersection(top_k_ids)
-                and not direct_ids.intersection(selected_ids)
+            if direct_ids.intersection(top_k_ids) and not direct_ids.intersection(
+                selected_ids
             ):
                 threshold_misses[threshold] += 1
 
@@ -198,9 +190,8 @@ def diagnose_answerable_cases(scored_cases):
     print(f"Reranking failures: {reranking_misses}")
 
     for threshold, count in threshold_misses.items():
-        print(
-            f"Threshold {threshold:.1f} misses: {count}"
-        )
+        print(f"Threshold {threshold:.1f} misses: {count}")
+
 
 def evaluate_results(case, chunk_ids):
     direct = set(case["relevant_chunk_ids"])
@@ -229,18 +220,11 @@ def evaluate_results(case, chunk_ids):
             "negative_correct": len(chunk_ids) == 0,
         }
 
-    direct_found = [
-        chunk_id
-        for chunk_id in chunk_ids
-        if chunk_id in direct
-    ]
+    direct_found = [chunk_id for chunk_id in chunk_ids if chunk_id in direct]
 
     precision = len(useful) / len(chunk_ids) if chunk_ids else 0.0
 
-    recall = (
-        len(set(direct_found)) / len(direct)
-        if direct else 0.0
-    )
+    recall = len(set(direct_found)) / len(direct) if direct else 0.0
 
     mrr = 0.0
 
@@ -259,6 +243,7 @@ def evaluate_results(case, chunk_ids):
         "negative_correct": None,
     }
 
+
 def run_rank_only(scored_cases):
     """Evaluate the top three candidates without score filtering."""
 
@@ -273,10 +258,7 @@ def run_rank_only(scored_cases):
         case = entry["case"]
         scored_candidates = entry["scored_candidates"]
 
-        selected_ids = [
-            item["chunk_id"]
-            for item in scored_candidates[:TOP_K]
-        ]
+        selected_ids = [item["chunk_id"] for item in scored_candidates[:TOP_K]]
 
         metrics = evaluate_results(case, selected_ids)
 
@@ -297,33 +279,28 @@ def run_rank_only(scored_cases):
 
     summary = {
         "macro_precision": (
-            sum(item["precision"] for item in positive_results)
-            / positive_count if positive_count else 0.0
+            sum(item["precision"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "micro_precision": (
-            total_useful / total_retrieved if total_retrieved else 0.0
-        ),
+        "micro_precision": (total_useful / total_retrieved if total_retrieved else 0.0),
         "recall": (
-            sum(item["recall"] for item in positive_results)
-            / positive_count if positive_count else 0.0
+            sum(item["recall"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
         "mrr": (
-            sum(item["mrr"] for item in positive_results)
-            / positive_count if positive_count else 0.0
+            sum(item["mrr"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "positive_fp": sum(
-            item["false_positives"] for item in positive_results
-        ),
-        "negative_fp": sum(
-            item["false_positives"] for item in negative_results
-        ),
+        "positive_fp": sum(item["false_positives"] for item in positive_results),
+        "negative_fp": sum(item["false_positives"] for item in negative_results),
         "total_fp": (
             sum(item["false_positives"] for item in positive_results)
             + sum(item["false_positives"] for item in negative_results)
         ),
-        "negative_correct": sum(
-            item["negative_correct"] for item in negative_results
-        ),
+        "negative_correct": sum(item["negative_correct"] for item in negative_results),
         "negative_total": negative_count,
     }
 
@@ -336,11 +313,11 @@ def run_rank_only(scored_cases):
     print(f"Negative false positives: {summary['negative_fp']}")
     print(f"Total false positives: {summary['total_fp']}")
     print(
-        f"Negative queries rejected: "
-        f"{summary['negative_correct']}/{negative_count}"
+        f"Negative queries rejected: " f"{summary['negative_correct']}/{negative_count}"
     )
 
     return summary
+
 
 def run_threshold(threshold, scored_cases):
     positive_results = []
@@ -355,32 +332,20 @@ def run_threshold(threshold, scored_cases):
         scored_candidates = entry["scored_candidates"]
 
         selected_ids = [
-            item["chunk_id"]
-            for item in scored_candidates
-            if item["score"] >= threshold
+            item["chunk_id"] for item in scored_candidates if item["score"] >= threshold
         ][:TOP_K]
 
         metrics = evaluate_results(case, selected_ids)
 
-        print(
-            f"\nTest {index}/"
-            f"{len(scored_cases)}"
-        )
+        print(f"\nTest {index}/" f"{len(scored_cases)}")
         print(f"Question: {case['question']}")
 
         print("All candidate scores:")
 
         for item in scored_candidates:
-            status = (
-                "SELECTED"
-                if item["chunk_id"] in selected_ids
-                else "FILTERED"
-            )
+            status = "SELECTED" if item["chunk_id"] in selected_ids else "FILTERED"
 
-            print(
-                f"  {item['chunk_id']}: "
-                f"{item['score']:.4f} [{status}]"
-            )
+            print(f"  {item['chunk_id']}: " f"{item['score']:.4f} [{status}]")
 
         print(f"Selected chunks: {selected_ids}")
 
@@ -389,72 +354,46 @@ def run_threshold(threshold, scored_cases):
         else:
             negative_results.append(metrics)
 
-            print(
-                f"Correctly rejected: "
-                f"{metrics['negative_correct']}"
-            )
+            print(f"Correctly rejected: " f"{metrics['negative_correct']}")
 
     positive_count = len(positive_results)
     negative_count = len(negative_results)
 
-    total_useful = sum(
-        item["useful"] for item in positive_results
-    )
+    total_useful = sum(item["useful"] for item in positive_results)
 
-    total_retrieved = sum(
-        item["retrieved"] for item in positive_results
-    )
+    total_retrieved = sum(item["retrieved"] for item in positive_results)
 
-    total_false_positives = (
-        sum(item["false_positives"] for item in positive_results)
-        + sum(item["false_positives"] for item in negative_results)
-    )
+    total_false_positives = sum(
+        item["false_positives"] for item in positive_results
+    ) + sum(item["false_positives"] for item in negative_results)
 
     summary = {
         "macro_precision": (
-            sum(item["precision"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["precision"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "micro_precision": (
-            total_useful / total_retrieved
-            if total_retrieved else 0.0
-        ),
+        "micro_precision": (total_useful / total_retrieved if total_retrieved else 0.0),
         "recall": (
-            sum(item["recall"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["recall"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
         "mrr": (
-            sum(item["mrr"] for item in positive_results)
-            / positive_count
-            if positive_count else 0.0
+            sum(item["mrr"] for item in positive_results) / positive_count
+            if positive_count
+            else 0.0
         ),
-        "positive_fp": sum(
-            item["false_positives"]
-            for item in positive_results
-        ),
-        "negative_fp": sum(
-            item["false_positives"]
-            for item in negative_results
-        ),
+        "positive_fp": sum(item["false_positives"] for item in positive_results),
+        "negative_fp": sum(item["false_positives"] for item in negative_results),
         "total_fp": total_false_positives,
-        "negative_correct": sum(
-            item["negative_correct"]
-            for item in negative_results
-        ),
+        "negative_correct": sum(item["negative_correct"] for item in negative_results),
         "negative_total": negative_count,
     }
 
     print("\nTHRESHOLD SUMMARY")
-    print(
-        f"Macro precision: "
-        f"{summary['macro_precision']:.2%}"
-    )
-    print(
-        f"Micro precision: "
-        f"{summary['micro_precision']:.2%}"
-    )
+    print(f"Macro precision: " f"{summary['macro_precision']:.2%}")
+    print(f"Micro precision: " f"{summary['micro_precision']:.2%}")
     print(f"Mean direct recall: {summary['recall']:.2%}")
     print(f"Mean MRR: {summary['mrr']:.2%}")
     print(f"Positive false positives: {summary['positive_fp']}")
