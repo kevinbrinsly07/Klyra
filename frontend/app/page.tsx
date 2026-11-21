@@ -59,6 +59,9 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [expandedSearchResults, setExpandedSearchResults] = useState<
+    Record<string, boolean>
+  >({});
 
   const [view, setView] = useState<"chat" | "documents" | "search">("chat");
 
@@ -706,11 +709,32 @@ export default function Home() {
                           </span>
                         </div>
 
-                        <div className="prose prose-sm max-w-none text-zinc-600 prose-headings:font-semibold prose-headings:text-zinc-800 prose-a:text-blue-600 prose-a:underline prose-strong:text-zinc-800 prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-zinc-800 prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:bg-zinc-900 prose-pre:p-4 prose-pre:text-zinc-100 prose-ul:my-2 prose-ol:my-2">
+                        <div
+                          className={`prose prose-sm max-w-none text-zinc-600 prose-headings:font-semibold prose-headings:text-zinc-800 prose-a:text-blue-600 prose-a:underline prose-strong:text-zinc-800 prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:bg-zinc-900 prose-pre:p-4 prose-pre:text-zinc-100 prose-ul:my-2 prose-ol:my-2 ${
+                            expandedSearchResults[result.chunk_id]
+                              ? ""
+                              : "max-h-64 overflow-hidden"
+                          }`}
+                        >
                           <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
                             {result.content}
                           </ReactMarkdown>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedSearchResults((current) => ({
+                              ...current,
+                              [result.chunk_id]: !current[result.chunk_id],
+                            }))
+                          }
+                          className="mt-3 text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
+                        >
+                          {expandedSearchResults[result.chunk_id]
+                            ? "Show less"
+                            : "Show more"}
+                        </button>
                       </article>
                     ))}
                   </div>
