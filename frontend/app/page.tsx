@@ -43,13 +43,10 @@ export default function Home() {
   const [view, setView] = useState<"chat" | "documents">("chat");
 
   const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const [uploadSuccess, setUploadSuccess] = useState("");
+
 
   async function handleDocumentUpload(file: File) {
     setUploading(true);
-    setUploadError("");
-    setUploadSuccess("");
 
     try {
       const apiUrl = API_BASE_URL;
@@ -455,16 +452,6 @@ export default function Home() {
                       />
                     </label>
                   </div>
-
-                  {uploadError && (
-                    <p className="mt-3 text-sm text-red-600">{uploadError}</p>
-                  )}
-
-                  {uploadSuccess && (
-                    <p className="mt-3 text-sm text-green-700">
-                      {uploadSuccess}
-                    </p>
-                  )}
                 </div>
               </div>
 
