@@ -44,8 +44,20 @@ export default function Home() {
 
   const [uploading, setUploading] = useState(false);
 
-
   async function handleDocumentUpload(file: File) {
+    if (
+      file.type !== "application/pdf" &&
+      !file.name.toLowerCase().endsWith(".pdf")
+    ) {
+      toast.error("Please select a valid PDF file.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must not exceed 10 MB.");
+      return;
+    }
+
     setUploading(true);
 
     try {
