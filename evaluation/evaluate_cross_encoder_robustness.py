@@ -27,15 +27,14 @@ TOP_K = 3
 MIN_SIMILARITY = 0.10
 
 THRESHOLDS = [
+    -2.0,
+    -1.5,
+    -1.0,
+    -0.5,
     0.0,
     2.0,
     3.0,
     3.5,
-    4.0,
-    4.5,
-    5.0,
-    5.5,
-    6.0,
 ]
 
 CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
