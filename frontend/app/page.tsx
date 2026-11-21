@@ -474,7 +474,14 @@ export default function Home() {
             <span>▤</span>
             Documents
           </button>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-300 hover:bg-zinc-800">
+          <button
+            onClick={() => setView("search")}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${
+              view === "search"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
             <span>⌘</span>
             Search
           </button>
@@ -624,7 +631,89 @@ export default function Home() {
         </header>
 
         <div className="flex flex-1 flex-col overflow-y-auto">
-          {view === "documents" ? (
+          {view === "search" ? (
+            <div className="mx-auto w-full max-w-4xl px-6 py-10">
+              <div className="mb-8">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Search documents
+                </h1>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Find relevant information across your indexed knowledge base.
+                </p>
+              </div>
+
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSearch();
+                }}
+                className="flex gap-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm focus-within:border-zinc-400"
+              >
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search your documents..."
+                  className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"
+                />
+
+                <button
+                  type="submit"
+                  disabled={!searchQuery.trim() || searchLoading}
+                  className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+                >
+                  {searchLoading ? "Searching..." : "Search"}
+                </button>
+              </form>
+
+              {searchError && (
+                <p className="mt-5 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {searchError}
+                </p>
+              )}
+
+              {!searchLoading && !searchError && searchResults.length === 0 && (
+                <div className="mt-10 rounded-xl border border-dashed border-zinc-300 px-6 py-16 text-center">
+                  <p className="text-sm font-medium text-zinc-700">
+                    No search results yet
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-500">
+                    Enter a keyword or phrase to search your documents.
+                  </p>
+                </div>
+              )}
+
+              {searchResults.length > 0 && (
+                <div className="mt-8">
+                  <p className="mb-4 text-sm text-zinc-500">
+                    {searchResults.length} results found
+                  </p>
+
+                  <div className="space-y-4">
+                    {searchResults.map((result) => (
+                      <article
+                        key={result.chunk_id}
+                        className="rounded-xl border border-zinc-200 p-5 transition hover:border-zinc-300"
+                      >
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-zinc-800">
+                            {result.filename}
+                          </p>
+                          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
+                            Score: {result.score.toFixed(3)}
+                          </span>
+                        </div>
+
+                        <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-600">
+                          {result.content}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : view === "documents" ? (
             <div className="mx-auto w-full max-w-4xl px-6 py-10">
               <div className="mb-8">
                 <h1 className="text-2xl font-semibold tracking-tight">
