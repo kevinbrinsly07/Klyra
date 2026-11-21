@@ -86,9 +86,6 @@ export default function Home() {
 
     if (!confirmed) return;
 
-    setUploadError("");
-    setUploadSuccess("");
-
     try {
       const apiUrl = API_BASE_URL;
 
