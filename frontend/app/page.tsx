@@ -31,6 +31,14 @@ type DocumentItem = {
   total_chunks: number;
 };
 
+type SearchResult = {
+  chunk_id: string;
+  content: string;
+  filename: string;
+  document_id: string | null;
+  score: number;
+};
+
 export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -44,7 +52,13 @@ export default function Home() {
   const [editingConversationTitle, setEditingConversationTitle] = useState("");
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
-  const [view, setView] = useState<"chat" | "documents">("chat");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+
+  const [view, setView] = useState<"chat" | "documents" | "search">("chat");
 
   const [uploading, setUploading] = useState(false);
 
@@ -381,6 +395,36 @@ export default function Home() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSearch() {
+    const query = searchQuery.trim();
+
+    if (!query || searchLoading) return;
+
+    setSearchLoading(true);
+    setSearchError("");
+    setSearchResults([]);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/documents/search?q=${encodeURIComponent(query)}&top_k=10`,
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Document search failed.");
+      }
+
+      setSearchResults(data.results || []);
+    } catch (err) {
+      setSearchError(
+        err instanceof Error ? err.message : "Document search failed.",
+      );
+    } finally {
+      setSearchLoading(false);
     }
   }
 
