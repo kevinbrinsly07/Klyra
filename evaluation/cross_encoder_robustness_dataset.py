@@ -288,7 +288,11 @@ MULTI_DOCUMENT_EVALUATION_DATASET = [
         "question": "What is the difference between vehicle registration and a driving licence?",
         "should_find_answer": True,
         "relevant_chunk_ids": ["vehicle_registration_0"],
-        "supporting_chunk_ids": ["vehicle_registration_1", "driving_licence_0"],
+        "supporting_chunk_ids": [
+            "vehicle_registration_1",
+            "driving_licence_0",
+            "driving_licence_2",
+        ],
     },
     {
         "question": "What areas are included in information technology?",
@@ -342,7 +346,7 @@ MULTI_DOCUMENT_EVALUATION_DATASET = [
         "question": "What activities are involved in project management?",
         "should_find_answer": True,
         "relevant_chunk_ids": ["project_management_0"],
-        "supporting_chunk_ids": [],
+        "supporting_chunk_ids": ["project_management_1"],
     },
     {
         "question": "How should project risks be managed?",
