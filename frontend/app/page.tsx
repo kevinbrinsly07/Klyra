@@ -292,6 +292,40 @@ export default function Home() {
     }
   }
 
+  async function handleDeleteConversation(id: string) {
+    if (!window.confirm("Are you sure you want to delete this conversation?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/conversations/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.detail || "Failed to delete conversation.");
+      }
+
+      setConversations((current) =>
+        current.filter((conversation) => conversation.id !== id),
+      );
+
+      if (conversationId === id) {
+        handleNewChat();
+      }
+
+      toast.success("Conversation deleted successfully.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete conversation.",
+      );
+    }
+  }
+
   async function handleSend() {
     const trimmed = message.trim();
 
@@ -488,6 +522,18 @@ export default function Home() {
                         title="Rename conversation"
                       >
                         ✎
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDeleteConversation(conversation.id)
+                        }
+                        disabled={loading}
+                        className="rounded p-2 text-xs text-zinc-500 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100 disabled:cursor-not-allowed"
+                        title="Delete conversation"
+                      >
+                        🗑
                       </button>
                     </>
                   )}
