@@ -4,6 +4,9 @@ import uuid
 
 from unittest.mock import patch
 
+from pypdf.errors import PdfReadError
+
+
 from app.services.rag_service import RAGService
 from app.vectorstore.chroma_service import ChromaService
 
@@ -143,6 +146,88 @@ def test_empty_document_is_rejected(isolated_chroma, tmp_path):
             rag.ingest_document(
                 file_path=str(pdf_path),
                 filename="empty.pdf",
+            )
+
+    assert isolated_chroma.collection.count() == 0
+
+
+def test_invalid_pdf_is_rejected(isolated_chroma, tmp_path):
+    pdf_path = tmp_path / "invalid.pdf"
+    pdf_path.write_bytes(b"This is not a valid PDF file.")
+
+    rag = RAGService()
+
+    with patch(
+        "app.services.rag_service.chroma_service",
+        isolated_chroma,
+    ):
+        with pytest.raises(PdfReadError):
+            rag.ingest_document(
+                file_path=str(pdf_path),
+                filename="invalid.pdf",
+            )
+
+    assert isolated_chroma.collection.count() == 0
+
+
+def test_document_with_no_chunks_is_rejected(isolated_chroma, tmp_path):
+    pdf_path = tmp_path / "no_chunks.pdf"
+    pdf_path.write_bytes(b"placeholder PDF content")
+
+    rag = RAGService()
+
+    with (
+        patch(
+            "app.services.rag_service.chroma_service",
+            isolated_chroma,
+        ),
+        patch(
+            "app.services.rag_service.document_service.extract_text",
+            return_value="Some extracted text.",
+        ),
+        patch(
+            "app.services.rag_service.document_service.split_into_chunks",
+            return_value=[],
+        ),
+    ):
+        with pytest.raises(ValueError, match="No document chunks"):
+            rag.ingest_document(
+                file_path=str(pdf_path),
+                filename="no_chunks.pdf",
+            )
+
+    assert isolated_chroma.collection.count() == 0
+
+
+def test_embedding_failure_does_not_store_document(isolated_chroma, tmp_path):
+    pdf_path = tmp_path / "embedding_failure.pdf"
+    pdf_path.write_bytes(b"placeholder PDF content")
+
+    rag = RAGService()
+
+    sample_text = (
+        "Artificial intelligence helps computers learn from data. "
+        "Machine learning is used in many applications."
+    )
+
+    with (
+        patch(
+            "app.services.rag_service.chroma_service",
+            isolated_chroma,
+        ),
+        patch(
+            "app.services.rag_service.document_service.extract_text",
+            return_value=sample_text,
+        ),
+        patch(
+            "app.services.rag_service.embedding_service.generate_embeddings",
+            side_effect=RuntimeError("Embedding model failed"),
+        ),
+    ):
+        with pytest.raises(RuntimeError, match="Embedding model failed"):
+            rag.ingest_document(
+                file_path=str(pdf_path),
+                filename="embedding_failure.pdf",
             )
 
     assert isolated_chroma.collection.count() == 0
