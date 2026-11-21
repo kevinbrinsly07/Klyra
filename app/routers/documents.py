@@ -1,4 +1,3 @@
-
 import uuid
 
 from pathlib import Path
@@ -13,7 +12,6 @@ from app.schemas.document import (
 )
 from app.vectorstore.chroma_service import chroma_service
 from app.services.keyword_search_service import keyword_search_service
-
 
 router = APIRouter(
     prefix="/api/v1/documents",
@@ -124,15 +122,51 @@ def list_documents(
     }
 
 
+@router.get("/search")
+def search_documents(
+    q: str = Query(..., min_length=1, max_length=500),
+    top_k: int = Query(default=10, ge=1, le=20),
+):
+    try:
+        results = keyword_search_service.search(
+            query=q,
+            top_k=top_k,
+        )
+
+        ids = results["ids"][0]
+        documents = results["documents"][0]
+        metadatas = results["metadatas"][0]
+        scores = results["scores"][0]
+
+        return {
+            "query": q,
+            "total_results": len(ids),
+            "results": [
+                {
+                    "chunk_id": ids[index],
+                    "content": documents[index],
+                    "filename": metadatas[index].get("filename", "Unknown source"),
+                    "document_id": metadatas[index].get("document_id"),
+                    "score": scores[index],
+                }
+                for index in range(len(ids))
+            ],
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
 @router.delete(
     "/{document_id}",
     response_model=DocumentDeleteResponse,
 )
 def delete_document(document_id: str):
 
-    deleted_chunks = chroma_service.delete_document(
-        document_id
-    )
+    deleted_chunks = chroma_service.delete_document(document_id)
 
     if deleted_chunks > 0:
         keyword_search_service.invalidate_cache()
