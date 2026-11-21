@@ -705,7 +705,7 @@ export default function Home() {
                             {result.filename}
                           </p>
                           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
-                            Score: {result.score.toFixed(3)}
+                            Hybrid score: {result.score.toFixed(3)}
                           </span>
                         </div>
 
