@@ -263,6 +263,15 @@ def run_experiment(scored_cases, mode):
                 )
             ][:TOP_K]
 
+        if mode == "intent_filter" and case["should_find_answer"]:
+            expected_ids = set(case["relevant_chunk_ids"])
+            selected_ids = {item["chunk_id"] for item in selected}
+
+            missing = expected_ids - selected_ids
+
+            if missing:
+                print(f"WARNING: Relevant chunks filtered out: {sorted(missing)}")
+
         else:
             raise ValueError(f"Unknown experiment mode: {mode}")
 
